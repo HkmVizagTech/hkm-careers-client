@@ -72,9 +72,21 @@ export async function submitApplication(formData: FormData): Promise<{
   return data;
 }
 
+export async function trackApplication(id: string): Promise<{
+  name: string;
+  email: string;
+  job: { title: string; location: string; type: string } | null;
+  status: string;
+  appliedAt: string;
+}> {
+  const { data } = await api.get(`/applications/track/${id}`);
+  return data;
+}
+
 export async function getAdminApplications(params?: {
   job?: string;
   status?: string;
+  department?: string;
   page?: number;
   limit?: number;
 }): Promise<ApplicationsResponse> {

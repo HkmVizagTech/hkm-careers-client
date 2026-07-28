@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Edit, Trash2, Building2, Users } from 'lucide-react';
+import { Plus, Edit, Trash2, Building2 } from 'lucide-react';
 import {
   getDepartments,
   createDepartment,

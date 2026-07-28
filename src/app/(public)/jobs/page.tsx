@@ -191,7 +191,7 @@ function JobsContent() {
                         </div>
                         <div className="mt-auto pt-5">
                           <div className="flex items-center justify-between border-t border-gray-100 pt-4">
-                            {job.salaryRange && <span className="text-sm font-bold text-navy">{job.salaryRange}</span>}
+                            {job.salaryRange && <span className="text-sm font-bold text-navy">{job.salaryRange.startsWith('₹') ? job.salaryRange : `₹${job.salaryRange}`}</span>}
                             <span className="ml-auto inline-flex items-center gap-1 text-sm font-semibold text-ocean group-hover:text-navy transition-colors">
                               Details <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                             </span>

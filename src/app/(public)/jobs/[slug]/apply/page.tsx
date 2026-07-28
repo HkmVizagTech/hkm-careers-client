@@ -25,6 +25,12 @@ import {
   Clock,
   Star,
   Shield,
+  Globe,
+  Linkedin,
+  Github,
+  ExternalLink,
+  Plus,
+  GraduationCap,
 } from 'lucide-react';
 import { getPublicJobBySlug, submitApplication } from '@/lib/services';
 import { Button } from '@/components/ui/Button';
@@ -35,12 +41,24 @@ const schema = z.object({
   name: z.string().min(1, 'Full name is required'),
   email: z.string().email('Please enter a valid email address'),
   phone: z.string().min(10, 'Please enter a valid phone number'),
-  coverLetter: z.string().optional(),
+  location: z.string().min(1, 'Location is required'),
+  gender: z.string().min(1, 'Gender is required'),
+  dateOfBirth: z.string().min(1, 'Date of birth is required'),
+  coverLetter: z.string().min(10, 'Please write at least a few words'),
   isExperienced: z.boolean(),
   yearsOfExperience: z.string().optional(),
   lastEmployer: z.string().optional(),
   lastEmploymentFrom: z.string().optional(),
   lastEmploymentTo: z.string().optional(),
+  availableToJoin: z.string().min(1, 'Please specify when you can join'),
+  currentLocation: z.string().min(1, 'Current location is required'),
+  linkedinUrl: z.string().url('Please enter a valid URL').optional().or(z.literal('')),
+  githubUrl: z.string().url('Please enter a valid URL').optional().or(z.literal('')),
+  portfolioUrl: z.string().url('Please enter a valid URL').optional().or(z.literal('')),
+  highestDegree: z.string().optional(),
+  collegeName: z.string().optional(),
+  collegeCity: z.string().optional(),
+  studyYears: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -57,12 +75,16 @@ export default function ApplyPage() {
   const [submitted, setSubmitted] = useState(false);
   const [applicationId, setApplicationId] = useState('');
   const [globalError, setGlobalError] = useState('');
+  const [showLinkedin, setShowLinkedin] = useState(false);
+  const [showGithub, setShowGithub] = useState(false);
+  const [showPortfolio, setShowPortfolio] = useState(false);
 
   const {
     register,
     handleSubmit,
     watch,
     control,
+    setValue,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -136,13 +158,27 @@ export default function ApplyPage() {
         if (data.lastEmploymentFrom) formData.append('lastEmploymentFrom', data.lastEmploymentFrom);
         if (data.lastEmploymentTo) formData.append('lastEmploymentTo', data.lastEmploymentTo);
       }
+      if (data.location) formData.append('location', data.location);
+      if (data.gender) formData.append('gender', data.gender);
+      if (data.dateOfBirth) formData.append('dateOfBirth', data.dateOfBirth);
+      if (data.availableToJoin) formData.append('availableToJoin', data.availableToJoin);
+      if (data.currentLocation) formData.append('currentLocation', data.currentLocation);
+      if (data.linkedinUrl) formData.append('linkedinUrl', data.linkedinUrl);
+      if (data.githubUrl) formData.append('githubUrl', data.githubUrl);
+      if (data.portfolioUrl) formData.append('portfolioUrl', data.portfolioUrl);
+      if (data.highestDegree) formData.append('highestDegree', data.highestDegree);
+      if (data.collegeName) formData.append('collegeName', data.collegeName);
+      if (data.collegeCity) formData.append('collegeCity', data.collegeCity);
+      if (data.studyYears) formData.append('studyYears', data.studyYears);
       formData.append('resume', file);
       const result = await submitApplication(formData);
       setApplicationId(result.application.id);
       setSubmitted(true);
     } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } };
       setGlobalError(
-        err instanceof Error ? err.message : 'Failed to submit application. Please try again.',
+        axiosErr.response?.data?.message ||
+          (err instanceof Error ? err.message : 'Failed to submit application. Please try again.'),
       );
     } finally {
       setSubmitting(false);
@@ -249,7 +285,7 @@ export default function ApplyPage() {
       </div>
 
       {/* Form container */}
-      <div className="mx-auto max-w-3xl px-4 sm:px-6 -mt-6 pb-16">
+      <div className="mx-auto max-w-3xl px-4 sm:px-6 py-8 pb-16 bg-background">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -341,6 +377,52 @@ export default function ApplyPage() {
                       {errors.phone && (
                         <p className="mt-1.5 text-xs text-red-500">{errors.phone.message}</p>
                       )}
+                    </div>
+                  </div>
+
+                  {/* Location + Gender + DOB */}
+                  <div className="grid gap-5 sm:grid-cols-3">
+                    <div>
+                      <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+                        Location <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <MapPin className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="e.g. Visakhapatnam"
+                          {...register('location')}
+                          className={`w-full rounded-xl border bg-white py-3.5 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.location ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
+                        />
+                      </div>
+                      {errors.location && <p className="mt-1.5 text-xs text-red-500">{errors.location.message}</p>}
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+                        Gender <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        {...register('gender')}
+                        className={`w-full rounded-xl border bg-white py-3.5 px-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.gender ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
+                      >
+                        <option value="">Select</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="other">Other</option>
+                        <option value="prefer-not-to-say">Prefer not to say</option>
+                      </select>
+                      {errors.gender && <p className="mt-1.5 text-xs text-red-500">{errors.gender.message}</p>}
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+                        Date of Birth <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        {...register('dateOfBirth')}
+                        className={`w-full rounded-xl border bg-white py-3.5 px-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.dateOfBirth ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
+                      />
+                      {errors.dateOfBirth && <p className="mt-1.5 text-xs text-red-500">{errors.dateOfBirth.message}</p>}
                     </div>
                   </div>
                 </div>
@@ -455,8 +537,205 @@ export default function ApplyPage() {
                       </div>
                     </motion.div>
                   )}
+
+                  <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+                        Available to Join <span className="text-red-500">*</span>
+                        <span className="ml-1 text-xs font-normal text-gray-400">(days)</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 15, 30, Immediately"
+                        {...register('availableToJoin')}
+                        className={`w-full rounded-xl border bg-white py-3 px-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.availableToJoin ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
+                      />
+                      {errors.availableToJoin && <p className="mt-1.5 text-xs text-red-500">{errors.availableToJoin.message}</p>}
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+                        Current Location <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <MapPin className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="e.g. Hyderabad"
+                          {...register('currentLocation')}
+                          className={`w-full rounded-xl border bg-white py-3 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.currentLocation ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
+                        />
+                      </div>
+                      {errors.currentLocation && <p className="mt-1.5 text-xs text-red-500">{errors.currentLocation.message}</p>}
+                    </div>
+                  </div>
                 </div>
               </div>
+
+              {/* Section: Online Profiles */}
+              <div>
+                <h3 className="flex items-center gap-2 text-sm font-bold text-navy uppercase tracking-wider">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-md bg-purple-100">
+                    <Globe className="h-3.5 w-3.5 text-purple-600" />
+                  </div>
+                  Online Profiles
+                  <span className="text-xs font-normal text-gray-400 normal-case tracking-normal">(optional — increases shortlisting chances)</span>
+                </h3>
+                <div className="mt-4 rounded-2xl border border-gray-200/80 bg-gradient-to-br from-purple-50/30 to-gray-100/30 p-5 sm:p-6 shadow-inner">
+                  <div className="flex flex-wrap gap-3">
+                    {!showLinkedin && (
+                      <button type="button" onClick={() => setShowLinkedin(true)}
+                        className="inline-flex items-center gap-2 rounded-xl border-2 border-dashed border-gray-300 px-4 py-3 text-sm font-medium text-gray-500 transition-all hover:border-ocean hover:text-ocean hover:bg-ocean/5">
+                        <Plus className="h-4 w-4" /> Add LinkedIn
+                      </button>
+                    )}
+                    {!showGithub && (
+                      <button type="button" onClick={() => setShowGithub(true)}
+                        className="inline-flex items-center gap-2 rounded-xl border-2 border-dashed border-gray-300 px-4 py-3 text-sm font-medium text-gray-500 transition-all hover:border-ocean hover:text-ocean hover:bg-ocean/5">
+                        <Plus className="h-4 w-4" /> Add GitHub
+                      </button>
+                    )}
+                    {!showPortfolio && (
+                      <button type="button" onClick={() => setShowPortfolio(true)}
+                        className="inline-flex items-center gap-2 rounded-xl border-2 border-dashed border-gray-300 px-4 py-3 text-sm font-medium text-gray-500 transition-all hover:border-ocean hover:text-ocean hover:bg-ocean/5">
+                        <Plus className="h-4 w-4" /> Add Portfolio
+                      </button>
+                    )}
+                  </div>
+
+                  {showLinkedin && (
+                    <div className="mt-4 flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <Linkedin className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-600" />
+                        <input type="url" placeholder="https://linkedin.com/in/your-profile" {...register('linkedinUrl')}
+                          className={`w-full rounded-xl border bg-white py-3 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.linkedinUrl ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`} />
+                      </div>
+                      <button type="button" onClick={() => { setShowLinkedin(false); setValue('linkedinUrl', ''); }}
+                        className="rounded-lg p-2 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-colors">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+                  {errors.linkedinUrl && showLinkedin && (
+                    <p className="mt-1.5 text-xs text-red-500">{errors.linkedinUrl.message}</p>
+                  )}
+
+                  {showGithub && (
+                    <div className="mt-4 flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <Github className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-800" />
+                        <input type="url" placeholder="https://github.com/your-username" {...register('githubUrl')}
+                          className={`w-full rounded-xl border bg-white py-3 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.githubUrl ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`} />
+                      </div>
+                      <button type="button" onClick={() => { setShowGithub(false); setValue('githubUrl', ''); }}
+                        className="rounded-lg p-2 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-colors">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+                  {errors.githubUrl && showGithub && (
+                    <p className="mt-1.5 text-xs text-red-500">{errors.githubUrl.message}</p>
+                  )}
+
+                  {showPortfolio && (
+                    <div className="mt-4 flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <ExternalLink className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-purple-600" />
+                        <input type="url" placeholder="https://your-portfolio.com" {...register('portfolioUrl')}
+                          className={`w-full rounded-xl border bg-white py-3 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.portfolioUrl ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`} />
+                      </div>
+                      <button type="button" onClick={() => { setShowPortfolio(false); setValue('portfolioUrl', ''); }}
+                        className="rounded-lg p-2 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-colors">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+                  {errors.portfolioUrl && showPortfolio && (
+                    <p className="mt-1.5 text-xs text-red-500">{errors.portfolioUrl.message}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Section: Educational Details (conditional) */}
+              {job?.askEducationalDetails && (
+                <div>
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-navy uppercase tracking-wider">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-100">
+                      <GraduationCap className="h-3.5 w-3.5 text-emerald-600" />
+                    </div>
+                    Educational Information
+                  </h3>
+                  <div className="mt-4 space-y-5 rounded-2xl border border-gray-200/80 bg-gradient-to-br from-emerald-50/30 to-gray-100/30 p-5 sm:p-6 shadow-inner">
+                    <div className="grid gap-5 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+                          Highest Degree
+                        </label>
+                        <select
+                          {...register('highestDegree')}
+                          className="w-full rounded-xl border border-gray-300 bg-white py-3.5 px-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean"
+                        >
+                          <option value="">Select degree</option>
+                          <option value="10th">10th</option>
+                          <option value="12th / Intermediate">12th / Intermediate</option>
+                          <option value="Diploma">Diploma</option>
+                          <option value="B.Tech / B.E.">B.Tech / B.E.</option>
+                          <option value="B.Sc">B.Sc</option>
+                          <option value="B.Com">B.Com</option>
+                          <option value="B.A.">B.A.</option>
+                          <option value="BBA">BBA</option>
+                          <option value="BCA">BCA</option>
+                          <option value="M.Tech / M.E.">M.Tech / M.E.</option>
+                          <option value="M.Sc">M.Sc</option>
+                          <option value="M.Com">M.Com</option>
+                          <option value="M.A.">M.A.</option>
+                          <option value="MBA">MBA</option>
+                          <option value="MCA">MCA</option>
+                          <option value="PhD">PhD</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+                          College / University Name
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. GITAM University"
+                          {...register('collegeName')}
+                          className="w-full rounded-xl border border-gray-300 bg-white py-3.5 px-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid gap-5 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+                          College City
+                        </label>
+                        <div className="relative">
+                          <MapPin className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                          <input
+                            type="text"
+                            placeholder="e.g. Visakhapatnam"
+                            {...register('collegeCity')}
+                            className="w-full rounded-xl border border-gray-300 bg-white py-3.5 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+                          Study Years
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. 2020 - 2024"
+                          {...register('studyYears')}
+                          className="w-full rounded-xl border border-gray-300 bg-white py-3.5 px-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Section: Documents */}
               <div>
@@ -530,18 +809,20 @@ export default function ApplyPage() {
                     )}
                   </div>
 
-                  {/* Cover Letter */}
+                  {/* Why should we hire you */}
                   <div>
                     <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                      Cover Letter{' '}
-                      <span className="text-xs font-normal text-gray-400">(optional)</span>
+                      Why should we hire you? <span className="text-red-500">*</span>
                     </label>
                     <textarea
-                      placeholder="Tell us why you'd be a great fit for this role and what motivates you to join HKM Vizag..."
+                      placeholder="Tell us why you'd be a great fit for this role, what unique skills you bring, and what motivates you to join HKM Vizag..."
                       rows={5}
                       {...register('coverLetter')}
-                      className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3.5 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean resize-none"
+                      className={`w-full rounded-xl border bg-white px-4 py-3.5 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean resize-none ${errors.coverLetter ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
                     />
+                    {errors.coverLetter && (
+                      <p className="mt-1.5 text-xs text-red-500">{errors.coverLetter.message}</p>
+                    )}
                   </div>
                 </div>
               </div>

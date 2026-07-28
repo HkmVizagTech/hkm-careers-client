@@ -20,6 +20,8 @@ export interface Job {
   experience: string;
   salaryRange: string;
   status: "draft" | "active" | "closed";
+  askEducationalDetails?: boolean;
+  targetGender?: 'any' | 'male' | 'female';
   applicationCount: number;
   postedBy: string;
   createdAt: string;
@@ -46,6 +48,18 @@ export interface Application {
   lastEmployer?: string;
   lastEmploymentFrom?: string;
   lastEmploymentTo?: string;
+  linkedinUrl?: string;
+  githubUrl?: string;
+  portfolioUrl?: string;
+  location?: string;
+  gender?: string;
+  dateOfBirth?: string;
+  availableToJoin?: string;
+  currentLocation?: string;
+  highestDegree?: string;
+  collegeName?: string;
+  collegeCity?: string;
+  studyYears?: string;
   status:
     | "received"
     | "under-review"

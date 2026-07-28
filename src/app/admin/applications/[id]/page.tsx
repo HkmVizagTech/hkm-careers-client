@@ -17,6 +17,10 @@ import {
   Clock,
   Briefcase,
   Building2,
+  Globe,
+  Linkedin,
+  Github,
+  ExternalLink,
 } from 'lucide-react';
 import {
   getAdminApplication,
@@ -50,6 +54,7 @@ export default function ApplicationDetailPage() {
   const [noteText, setNoteText] = useState('');
   const [addingNote, setAddingNote] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [statusConfirm, setStatusConfirm] = useState<string | null>(null);
 
   const load = async () => {
     try { const data = await getAdminApplication(id); setApp(data); } catch { /* */ } finally { setLoading(false); }
@@ -59,8 +64,13 @@ export default function ApplicationDetailPage() {
 
   const handleStatusChange = async (status: string) => {
     if (!app) return;
-    try { const updated = await updateApplicationStatus(app._id, status); setApp({ ...app, status: updated.status }); }
-    catch (err: unknown) { alert(err instanceof Error ? err.message : 'Failed to update status'); }
+    try {
+      const updated = await updateApplicationStatus(app._id, status);
+      setApp({ ...app, status: updated.status });
+      setStatusConfirm(null);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to update status');
+    }
   };
 
   const handleAddNote = async () => {
@@ -172,6 +182,111 @@ export default function ApplicationDetailPage() {
             </motion.div>
           )}
 
+          {/* Personal Details */}
+          {(app.location || app.gender || app.dateOfBirth) && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+              <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
+                <User className="h-5 w-5 text-ocean" /> Personal Details
+              </h2>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                {app.location && (
+                  <div className="rounded-xl bg-background p-4">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Location</p>
+                    <p className="mt-1 text-sm font-bold text-navy">{app.location}</p>
+                  </div>
+                )}
+                {app.gender && (
+                  <div className="rounded-xl bg-background p-4">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Gender</p>
+                    <p className="mt-1 text-sm font-bold text-navy capitalize">{app.gender.replace(/-/g, ' ')}</p>
+                  </div>
+                )}
+                {app.dateOfBirth && (
+                  <div className="rounded-xl bg-background p-4">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Date of Birth</p>
+                    <p className="mt-1 text-sm font-bold text-navy">{formatDate(app.dateOfBirth)}</p>
+                  </div>
+                )}
+                {app.currentLocation && (
+                  <div className="rounded-xl bg-background p-4">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Current Location</p>
+                    <p className="mt-1 text-sm font-bold text-navy">{app.currentLocation}</p>
+                  </div>
+                )}
+                {app.availableToJoin && (
+                  <div className="rounded-xl bg-background p-4">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Available to Join</p>
+                    <p className="mt-1 text-sm font-bold text-navy">{app.availableToJoin} days</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Educational Details */}
+          {(app.highestDegree || app.collegeName) && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+              <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
+                <Building2 className="h-5 w-5 text-ocean" /> Educational Details
+              </h2>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                {app.highestDegree && (
+                  <div className="rounded-xl bg-background p-4">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Highest Degree</p>
+                    <p className="mt-1 text-sm font-bold text-navy">{app.highestDegree}</p>
+                  </div>
+                )}
+                {app.collegeName && (
+                  <div className="rounded-xl bg-background p-4">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">College / University</p>
+                    <p className="mt-1 text-sm font-bold text-navy">{app.collegeName}</p>
+                  </div>
+                )}
+                {app.collegeCity && (
+                  <div className="rounded-xl bg-background p-4">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">College City</p>
+                    <p className="mt-1 text-sm font-bold text-navy">{app.collegeCity}</p>
+                  </div>
+                )}
+                {app.studyYears && (
+                  <div className="rounded-xl bg-background p-4">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Study Years</p>
+                    <p className="mt-1 text-sm font-bold text-navy">{app.studyYears}</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Online Profiles */}
+          {(app.linkedinUrl || app.githubUrl || app.portfolioUrl) && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+              <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
+                <Globe className="h-5 w-5 text-ocean" /> Online Profiles
+              </h2>
+              <div className="mt-4 space-y-2">
+                {app.linkedinUrl && (
+                  <a href={app.linkedinUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-3 rounded-xl bg-background p-3 text-sm text-ocean hover:bg-ocean/5 transition-colors">
+                    <Linkedin className="h-4 w-4" /> {app.linkedinUrl}
+                  </a>
+                )}
+                {app.githubUrl && (
+                  <a href={app.githubUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-3 rounded-xl bg-background p-3 text-sm text-ocean hover:bg-ocean/5 transition-colors">
+                    <Github className="h-4 w-4" /> {app.githubUrl}
+                  </a>
+                )}
+                {app.portfolioUrl && (
+                  <a href={app.portfolioUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-3 rounded-xl bg-background p-3 text-sm text-ocean hover:bg-ocean/5 transition-colors">
+                    <ExternalLink className="h-4 w-4" /> {app.portfolioUrl}
+                  </a>
+                )}
+              </div>
+            </motion.div>
+          )}
+
           {/* Cover Letter */}
           {app.coverLetter && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -214,7 +329,7 @@ export default function ApplicationDetailPage() {
             <h2 className="text-base font-bold text-gray-900">Update Status</h2>
             <div className="mt-3 space-y-1.5">
               {statuses.map((s) => (
-                <button key={s.value} onClick={() => handleStatusChange(s.value)}
+                <button key={s.value} onClick={() => s.value !== app.status && setStatusConfirm(s.value)}
                   className={`w-full rounded-xl px-4 py-3 text-left text-sm font-semibold transition-all ${app.status === s.value ? `${s.color} shadow-sm` : 'text-gray-500 hover:bg-gray-50'}`}>
                   {app.status === s.value && <span className="mr-2 inline-block h-2 w-2 rounded-full bg-current" />}
                   {s.label}
@@ -241,6 +356,18 @@ export default function ApplicationDetailPage() {
           </motion.div>
         </div>
       </div>
+
+      {/* Status Confirmation */}
+      <Modal isOpen={!!statusConfirm} onClose={() => setStatusConfirm(null)} title="Confirm Status Change" size="sm">
+        <p className="text-sm text-gray-600">
+          Are you sure you want to change the status to{' '}
+          <strong className="text-navy">{statuses.find((s) => s.value === statusConfirm)?.label}</strong>?
+        </p>
+        <div className="mt-6 flex justify-end gap-3">
+          <Button variant="ghost" onClick={() => setStatusConfirm(null)}>Cancel</Button>
+          <Button onClick={() => statusConfirm && handleStatusChange(statusConfirm)}>Confirm</Button>
+        </div>
+      </Modal>
 
       {/* Delete Confirmation */}
       <Modal isOpen={deleteConfirm} onClose={() => setDeleteConfirm(false)} title="Delete Application" size="sm">

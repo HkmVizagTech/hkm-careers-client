@@ -4,11 +4,11 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Search, ExternalLink, FileText, ArrowRight } from 'lucide-react';
-import { getAdminApplications, getAdminJobs } from '@/lib/services';
+import { getAdminApplications, getAdminJobs, getDepartments } from '@/lib/services';
 import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
 import { formatDate } from '@/lib/utils';
-import type { Application, Job, PaginationInfo } from '@/types';
+import type { Application, Job, Department, PaginationInfo } from '@/types';
 
 const statusLabels: Record<string, string> = {
   received: 'Received', 'under-review': 'Under Review', shortlisted: 'Shortlisted',
@@ -18,8 +18,10 @@ const statusLabels: Record<string, string> = {
 export default function ApplicationsPage() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo>({ total: 0, page: 1, pages: 0 });
   const [loading, setLoading] = useState(true);
+  const [departmentFilter, setDepartmentFilter] = useState('');
   const [jobFilter, setJobFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
@@ -28,16 +30,18 @@ export default function ApplicationsPage() {
     setLoading(true);
     try {
       const params: Record<string, string | number> = { page, limit: 15 };
+      if (departmentFilter) params.department = departmentFilter;
       if (jobFilter) params.job = jobFilter;
       if (statusFilter) params.status = statusFilter;
-      const [appsData, jobsData] = await Promise.all([getAdminApplications(params), getAdminJobs({ limit: 100 })]);
+      const [appsData, jobsData, deptsData] = await Promise.all([getAdminApplications(params), getAdminJobs({ limit: 100 }), getDepartments()]);
       setApplications(appsData.applications);
       setPagination(appsData.pagination);
       setJobs(jobsData.jobs);
+      setDepartments(deptsData);
     } catch { /* */ } finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, [jobFilter, statusFilter, page]); // eslint-disable-line
+  useEffect(() => { load(); }, [departmentFilter, jobFilter, statusFilter, page]); // eslint-disable-line
 
   const jobTitle = (job: Application['job']): string => (typeof job === 'object' && job !== null && 'title' in job) ? job.title : '—';
 
@@ -57,6 +61,11 @@ export default function ApplicationsPage() {
             {jobs.map((j) => <option key={j._id} value={j._id}>{j.title}</option>)}
           </select>
         </div>
+        <select value={departmentFilter} onChange={(e) => { setDepartmentFilter(e.target.value); setPage(1); }}
+          className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:border-ocean focus:outline-none focus:ring-2 focus:ring-ocean/20">
+          <option value="">All Departments</option>
+          {departments.map((d) => <option key={d._id} value={d._id}>{d.name}</option>)}
+        </select>
         <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
           className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:border-ocean focus:outline-none focus:ring-2 focus:ring-ocean/20">
           <option value="">All Statuses</option>

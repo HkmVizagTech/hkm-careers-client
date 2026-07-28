@@ -8,7 +8,7 @@ import {
   Trash2,
   Search,
   Briefcase,
-  MoreHorizontal,
+  X,
 } from 'lucide-react';
 import {
   getAdminJobs,
@@ -32,9 +32,10 @@ interface JobForm {
   title: string; department: string; location: string; type: string;
   description: string; responsibilities: string; qualifications: string;
   experience: string; salaryRange: string; status: string;
+  askEducationalDetails: boolean; targetGender: string;
 }
 
-const emptyForm: JobForm = { title: '', department: '', location: '', type: 'full-time', description: '', responsibilities: '', qualifications: '', experience: '', salaryRange: '', status: 'draft' };
+const emptyForm: JobForm = { title: '', department: '', location: '', type: 'full-time', description: '', responsibilities: '', qualifications: '', experience: '', salaryRange: '', status: 'draft', askEducationalDetails: false, targetGender: 'any' };
 
 export default function AdminJobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -48,6 +49,9 @@ export default function AdminJobsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [descriptionPoints, setDescriptionPoints] = useState<string[]>(['']);
+  const [responsibilities, setResponsibilities] = useState<string[]>(['']);
+  const [qualifications, setQualifications] = useState<string[]>(['']);
 
   const loadData = async () => {
     setLoading(true);
@@ -63,18 +67,27 @@ export default function AdminJobsPage() {
 
   useEffect(() => { loadData(); }, [search, statusFilter]); // eslint-disable-line
 
-  const openCreate = () => { setEditingJob(null); setForm(emptyForm); setError(''); setModalOpen(true); };
+  const openCreate = () => { setEditingJob(null); setForm(emptyForm); setDescriptionPoints(['']); setResponsibilities(['']); setQualifications(['']); setError(''); setModalOpen(true); };
   const openEdit = (job: Job) => {
     setEditingJob(job);
-    setForm({ title: job.title, department: typeof job.department === 'object' ? job.department._id : job.department, location: job.location, type: job.type, description: job.description, responsibilities: job.responsibilities || '', qualifications: job.qualifications || '', experience: job.experience || '', salaryRange: job.salaryRange || '', status: job.status });
+    setForm({ title: job.title, department: typeof job.department === 'object' ? job.department._id : job.department, location: job.location, type: job.type, description: job.description, responsibilities: job.responsibilities || '', qualifications: job.qualifications || '', experience: job.experience || '', salaryRange: job.salaryRange || '', status: job.status, askEducationalDetails: job.askEducationalDetails || false, targetGender: job.targetGender || 'any' });
+    setDescriptionPoints(job.description ? job.description.split('\n').filter(Boolean) : ['']);
+    setResponsibilities(job.responsibilities ? job.responsibilities.split('\n').filter(Boolean) : ['']);
+    setQualifications(job.qualifications ? job.qualifications.split('\n').filter(Boolean) : ['']);
     setError(''); setModalOpen(true);
   };
 
   const handleSave = async () => {
     setSaving(true); setError('');
     try {
-      if (editingJob) await updateJob(editingJob._id, form as Partial<Job>);
-      else await createJob(form as Partial<Job> & { department: string });
+      const jobData = {
+        ...form,
+        description: descriptionPoints.filter(d => d.trim()).join('\n'),
+        responsibilities: responsibilities.filter(r => r.trim()).join('\n'),
+        qualifications: qualifications.filter(q => q.trim()).join('\n'),
+      };
+      if (editingJob) await updateJob(editingJob._id, jobData as Partial<Job>);
+      else await createJob(jobData as Partial<Job> & { department: string });
       setModalOpen(false); loadData();
     } catch (err: unknown) { setError(err instanceof Error ? err.message : 'Failed to save job'); } finally { setSaving(false); }
   };
@@ -210,18 +223,107 @@ export default function AdminJobsPage() {
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-gray-700">Description</label>
-            <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Describe the role..." rows={4}
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-ocean/20 focus:border-ocean resize-none" />
+            <div className="space-y-2">
+              {descriptionPoints.map((item, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-navy/10 text-xs font-bold text-navy flex-shrink-0">{index + 1}</span>
+                  <input type="text" value={item}
+                    onChange={(e) => { const u = [...descriptionPoints]; u[index] = e.target.value; setDescriptionPoints(u); }}
+                    placeholder={`Description point ${index + 1}`}
+                    className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:border-ocean focus:outline-none focus:ring-2 focus:ring-ocean/20" />
+                  {descriptionPoints.length > 1 && (
+                    <button type="button" onClick={() => setDescriptionPoints(descriptionPoints.filter((_, i) => i !== index))}
+                      className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"><X className="h-4 w-4" /></button>
+                  )}
+                </div>
+              ))}
+              <button type="button" onClick={() => setDescriptionPoints([...descriptionPoints, ''])}
+                className="inline-flex items-center gap-1.5 rounded-xl border-2 border-dashed border-gray-300 px-4 py-2 text-sm font-medium text-gray-500 transition-all hover:border-ocean hover:text-ocean hover:bg-ocean/5">
+                <Plus className="h-4 w-4" /> Add Point
+              </button>
+            </div>
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-semibold text-gray-700">Responsibilities</label>
-            <textarea value={form.responsibilities} onChange={(e) => setForm({ ...form, responsibilities: e.target.value })} placeholder="List key responsibilities..." rows={3}
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-ocean/20 focus:border-ocean resize-none" />
+            <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+              Responsibilities <span className="text-red-500">*</span>
+            </label>
+            <div className="space-y-2">
+              {responsibilities.map((item, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-navy/10 text-xs font-bold text-navy flex-shrink-0">
+                    {index + 1}
+                  </span>
+                  <input
+                    type="text"
+                    value={item}
+                    onChange={(e) => {
+                      const updated = [...responsibilities];
+                      updated[index] = e.target.value;
+                      setResponsibilities(updated);
+                    }}
+                    placeholder={`Responsibility ${index + 1}`}
+                    className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:border-ocean focus:outline-none focus:ring-2 focus:ring-ocean/20"
+                  />
+                  {responsibilities.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setResponsibilities(responsibilities.filter((_, i) => i !== index))}
+                      className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setResponsibilities([...responsibilities, ''])}
+                className="inline-flex items-center gap-1.5 rounded-xl border-2 border-dashed border-gray-300 px-4 py-2 text-sm font-medium text-gray-500 transition-all hover:border-ocean hover:text-ocean hover:bg-ocean/5"
+              >
+                <Plus className="h-4 w-4" /> Add Point
+              </button>
+            </div>
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-semibold text-gray-700">Qualifications</label>
-            <textarea value={form.qualifications} onChange={(e) => setForm({ ...form, qualifications: e.target.value })} placeholder="Required qualifications..." rows={3}
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-ocean/20 focus:border-ocean resize-none" />
+            <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+              Qualifications <span className="text-red-500">*</span>
+            </label>
+            <div className="space-y-2">
+              {qualifications.map((item, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-navy/10 text-xs font-bold text-navy flex-shrink-0">
+                    {index + 1}
+                  </span>
+                  <input
+                    type="text"
+                    value={item}
+                    onChange={(e) => {
+                      const updated = [...qualifications];
+                      updated[index] = e.target.value;
+                      setQualifications(updated);
+                    }}
+                    placeholder={`Qualification ${index + 1}`}
+                    className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:border-ocean focus:outline-none focus:ring-2 focus:ring-ocean/20"
+                  />
+                  {qualifications.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setQualifications(qualifications.filter((_, i) => i !== index))}
+                      className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setQualifications([...qualifications, ''])}
+                className="inline-flex items-center gap-1.5 rounded-xl border-2 border-dashed border-gray-300 px-4 py-2 text-sm font-medium text-gray-500 transition-all hover:border-ocean hover:text-ocean hover:bg-ocean/5"
+              >
+                <Plus className="h-4 w-4" /> Add Point
+              </button>
+            </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -233,6 +335,28 @@ export default function AdminJobsPage() {
               <label className="mb-1.5 block text-sm font-semibold text-gray-700">Salary Range</label>
               <input value={form.salaryRange} onChange={(e) => setForm({ ...form, salaryRange: e.target.value })} placeholder="e.g. ₹3-5 LPA"
                 className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-ocean/20 focus:border-ocean" />
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-gray-700">Target Gender</label>
+              <select value={form.targetGender} onChange={(e) => setForm({ ...form, targetGender: e.target.value })}
+                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-ocean/20 focus:border-ocean">
+                <option value="any">Any / Open to All</option>
+                <option value="male">Male Only</option>
+                <option value="female">Female Only</option>
+              </select>
+            </div>
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 flex items-center">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" checked={form.askEducationalDetails}
+                  onChange={(e) => setForm({ ...form, askEducationalDetails: e.target.checked })}
+                  className="h-5 w-5 rounded border-gray-300 text-ocean focus:ring-ocean/30" />
+                <div>
+                  <span className="text-sm font-semibold text-gray-700">Ask Educational Details</span>
+                  <p className="text-xs text-gray-400">Degree, college, city, study years</p>
+                </div>
+              </label>
             </div>
           </div>
           <div>

@@ -7,6 +7,7 @@ const footerLinks = {
   explore: [
     { href: '/jobs', label: 'Open Positions' },
     { href: '/about', label: 'About Us' },
+    { href: '/track', label: 'Track Application' },
   ],
   connect: [
     { href: 'https://harekrishnavizag.org', label: 'Main Website', external: true },

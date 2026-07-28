@@ -11,6 +11,7 @@ const navLinks = [
   { href: '/', label: 'Home' },
   { href: '/jobs', label: 'Careers' },
   { href: '/about', label: 'About Us' },
+  { href: '/track', label: 'Track Application' },
 ];
 
 export default function Header() {

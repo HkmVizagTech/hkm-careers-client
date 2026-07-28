@@ -320,7 +320,7 @@ export default function HomePage() {
                       <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-4">
                         {job.salaryRange && (
                           <span className="text-sm font-semibold text-navy">
-                            {job.salaryRange}
+                            {job.salaryRange.startsWith('₹') ? job.salaryRange : `₹${job.salaryRange}`}
                           </span>
                         )}
                         <span className="ml-auto inline-flex items-center gap-1 text-sm font-semibold text-ocean transition-all group-hover:gap-2">
