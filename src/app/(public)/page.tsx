@@ -110,7 +110,7 @@ export default function HomePage() {
   return (
     <div className="overflow-hidden">
       {/* Hero */}
-      <section className="relative min-h-[90vh] flex items-center bg-gradient-to-br from-navy via-[#0a2d6e] to-[#0c3d8f]">
+      <section className="relative min-h-[90vh] flex items-center bg-gradient-to-br from-navy via-[#2a1d6b] to-[#0c3d8f]">
         {/* Animated background shapes */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-cyan/10 animate-float" />
@@ -230,33 +230,43 @@ export default function HomePage() {
 
       {/* Department Pills */}
       {departments.length > 0 && (
-        <section className="relative -mt-1 bg-background py-12">
+        <section className="page-canvas relative -mt-1 py-12">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex flex-wrap justify-center gap-3">
-              {departments.map((dept) => (
-                <Link
-                  key={dept._id}
-                  href={`/jobs?department=${dept._id}`}
-                  className="group inline-flex items-center gap-2.5 rounded-2xl border border-gray-200 bg-white px-6 py-3.5 text-sm font-medium text-navy shadow-sm transition-all hover:border-ocean hover:shadow-md hover:shadow-ocean/5 hover:-translate-y-0.5"
-                >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-ocean/10 text-ocean transition-colors group-hover:bg-ocean group-hover:text-white">
-                    <Briefcase className="h-4 w-4" />
-                  </div>
-                  {dept.name}
-                </Link>
-              ))}
+              {departments.map((dept, i) => {
+                const tints = [
+                  { ring: 'hover:border-ocean/60', chip: 'bg-ocean/10 text-ocean group-hover:bg-ocean' },
+                  { ring: 'hover:border-plum/60', chip: 'bg-plum/10 text-plum group-hover:bg-plum' },
+                  { ring: 'hover:border-teal/60', chip: 'bg-teal/10 text-teal group-hover:bg-teal' },
+                  { ring: 'hover:border-goldDeep/60', chip: 'bg-gold/15 text-goldDeep group-hover:bg-goldDeep' },
+                  { ring: 'hover:border-rose/60', chip: 'bg-rose/10 text-rose group-hover:bg-rose' },
+                ];
+                const t = tints[i % tints.length];
+                return (
+                  <Link
+                    key={dept._id}
+                    href={`/jobs?department=${dept._id}`}
+                    className={`group inline-flex items-center gap-2.5 rounded-2xl border border-white/80 bg-white px-6 py-3.5 text-sm font-medium text-navy shadow-lift ring-1 ring-navy/[0.04] transition-all hover:shadow-glow hover:-translate-y-0.5 ${t.ring}`}
+                  >
+                    <div className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors group-hover:text-white ${t.chip}`}>
+                      <Briefcase className="h-4 w-4" />
+                    </div>
+                    {dept.name}
+                  </Link>
+                );
+              })}
             </div>
           </div>
         </section>
       )}
 
       {/* Featured Openings */}
-      <section className="bg-background py-16 sm:py-20">
+      <section className="page-canvas py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-end justify-between">
             <div>
-              <span className="text-sm font-semibold text-ocean">Open Positions</span>
-              <h2 className="mt-1 text-3xl font-bold text-navy sm:text-4xl">
+              <span className="eyebrow">Open Positions</span>
+              <h2 className="mt-2 text-3xl font-bold text-navy sm:text-4xl">
                 Featured Openings
               </h2>
               <p className="mt-2 text-gray-500">
@@ -288,50 +298,62 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {featuredJobs.map((job, i) => (
-                <motion.div
-                  key={job._id}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: i * 0.05 }}
-                >
-                  <Link href={`/jobs/${job.slug}`}>
-                    <div className="group gradient-border h-full rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-xl hover:shadow-navy/5 hover:-translate-y-1">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-navy to-ocean text-white">
-                          <Briefcase className="h-5 w-5" />
+              {featuredJobs.map((job, i) => {
+                // Full class strings only — Tailwind cannot detect names built by interpolation.
+                const themes = [
+                  { icon: 'from-navy to-ocean', tint: 'to-ocean/[0.05]', accent: 'text-ocean', hoverText: 'group-hover:text-ocean' },
+                  { icon: 'from-plum to-plumDeep', tint: 'to-plum/[0.05]', accent: 'text-plum', hoverText: 'group-hover:text-plum' },
+                  { icon: 'from-teal to-tealDeep', tint: 'to-teal/[0.05]', accent: 'text-teal', hoverText: 'group-hover:text-teal' },
+                  { icon: 'from-gold to-goldDeep', tint: 'to-gold/[0.06]', accent: 'text-goldDeep', hoverText: 'group-hover:text-goldDeep' },
+                  { icon: 'from-rose to-roseDeep', tint: 'to-rose/[0.05]', accent: 'text-rose', hoverText: 'group-hover:text-rose' },
+                  { icon: 'from-ocean to-cyan', tint: 'to-cyan/[0.06]', accent: 'text-ocean', hoverText: 'group-hover:text-ocean' },
+                ];
+                const t = themes[i % themes.length];
+                return (
+                  <motion.div
+                    key={job._id}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.4, delay: i * 0.05 }}
+                  >
+                    <Link href={`/jobs/${job.slug}`}>
+                      <div className={`group accent-sweep h-full rounded-2xl border border-white/70 bg-gradient-to-br from-white ${t.tint} p-6 shadow-lift ring-1 ring-navy/[0.04] transition-all duration-300 hover:shadow-glow hover:-translate-y-1`}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${t.icon} text-white shadow-md transition-transform duration-300 group-hover:scale-105`}>
+                            <Briefcase className="h-5 w-5" />
+                          </div>
+                          <Badge variant={job.type}>{typeLabels[job.type]}</Badge>
                         </div>
-                        <Badge variant={job.type}>{typeLabels[job.type]}</Badge>
-                      </div>
-                      <h3 className="mt-4 text-lg font-bold text-navy transition-colors group-hover:text-ocean">
-                        {job.title}
-                      </h3>
-                      <div className="mt-3 flex flex-col gap-1.5 text-sm text-gray-500">
-                        <span className="flex items-center gap-1.5">
-                          <Briefcase className="h-3.5 w-3.5 text-ocean/60" />
-                          {departmentName(job.department)}
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <MapPin className="h-3.5 w-3.5 text-ocean/60" />
-                          {job.location}
-                        </span>
-                      </div>
-                      <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-4">
-                        {job.salaryRange && (
-                          <span className="text-sm font-semibold text-navy">
-                            {job.salaryRange.startsWith('₹') ? job.salaryRange : `₹${job.salaryRange}`}
+                        <h3 className={`mt-4 text-lg font-bold text-navy transition-colors ${t.hoverText}`}>
+                          {job.title}
+                        </h3>
+                        <div className="mt-3 flex flex-col gap-1.5 text-sm text-gray-500">
+                          <span className="flex items-center gap-1.5">
+                            <Briefcase className={`h-3.5 w-3.5 ${t.accent} opacity-60`} />
+                            {departmentName(job.department)}
                           </span>
-                        )}
-                        <span className="ml-auto inline-flex items-center gap-1 text-sm font-semibold text-ocean transition-all group-hover:gap-2">
-                          Apply
-                          <ArrowRight className="h-4 w-4" />
-                        </span>
+                          <span className="flex items-center gap-1.5">
+                            <MapPin className={`h-3.5 w-3.5 ${t.accent} opacity-60`} />
+                            {job.location}
+                          </span>
+                        </div>
+                        <div className="mt-5 flex items-center justify-between border-t border-hairline pt-4">
+                          {job.salaryRange && (
+                            <span className="rounded-lg bg-emerald-50 px-2.5 py-1 text-sm font-bold text-emerald-700">
+                              {job.salaryRange.startsWith('₹') ? job.salaryRange : `₹${job.salaryRange}`}
+                            </span>
+                          )}
+                          <span className={`ml-auto inline-flex items-center gap-1 text-sm font-semibold ${t.accent} transition-all group-hover:gap-2`}>
+                            Apply
+                            <ArrowRight className="h-4 w-4" />
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  </Link>
-                </motion.div>
-              ))}
+                    </Link>
+                  </motion.div>
+                );
+              })}
             </div>
           )}
 
@@ -348,11 +370,12 @@ export default function HomePage() {
       </section>
 
       {/* How It Works */}
-      <section className="bg-white py-16 sm:py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <span className="text-sm font-semibold text-ocean">Process</span>
-            <h2 className="mt-1 text-3xl font-bold text-navy sm:text-4xl">
+      <section className="page-canvas-deep relative py-16 sm:py-20">
+        <div className="canvas-dots pointer-events-none absolute inset-0 opacity-50" />
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col items-center text-center">
+            <span className="eyebrow">Process</span>
+            <h2 className="mt-2 text-3xl font-bold text-navy sm:text-4xl">
               How to Get Started
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-gray-500">
@@ -360,41 +383,46 @@ export default function HomePage() {
             </p>
           </div>
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {steps.map((step, i) => (
-              <motion.div
-                key={step.num}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: i * 0.1 }}
-                className="relative rounded-2xl border border-gray-200 bg-background p-6"
-              >
-                <span className="text-5xl font-black text-navy/[0.06]">
-                  {step.num}
-                </span>
-                <h3 className="mt-2 text-lg font-bold text-navy">
-                  {step.title}
-                </h3>
-                <p className="mt-2 text-sm text-gray-500 leading-relaxed">
-                  {step.desc}
-                </p>
-                {i < steps.length - 1 && (
-                  <div className="absolute right-0 top-1/2 hidden -translate-y-1/2 translate-x-1/2 text-gray-300 lg:block">
-                    <ChevronRight className="h-5 w-5" />
-                  </div>
-                )}
-              </motion.div>
-            ))}
+            {steps.map((step, i) => {
+              const bars = ['from-navy to-ocean', 'from-ocean to-cyan', 'from-plum to-plumDeep', 'from-gold to-goldDeep'];
+              const nums = ['text-ocean/15', 'text-cyan/25', 'text-plum/15', 'text-gold/30'];
+              return (
+                <motion.div
+                  key={step.num}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4, delay: i * 0.1 }}
+                  className="group relative overflow-hidden rounded-2xl border border-white/70 bg-white p-6 shadow-lift ring-1 ring-navy/[0.04] transition-all hover:shadow-glow hover:-translate-y-1"
+                >
+                  <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${bars[i % bars.length]}`} />
+                  <span className={`text-5xl font-black ${nums[i % nums.length]}`}>
+                    {step.num}
+                  </span>
+                  <h3 className="mt-2 text-lg font-bold text-navy">
+                    {step.title}
+                  </h3>
+                  <p className="mt-2 text-sm text-gray-500 leading-relaxed">
+                    {step.desc}
+                  </p>
+                  {i < steps.length - 1 && (
+                    <div className="absolute right-0 top-1/2 hidden -translate-y-1/2 translate-x-1/2 text-gray-300 lg:block">
+                      <ChevronRight className="h-5 w-5" />
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>
 
       {/* Life at HKM */}
-      <section className="bg-background py-16 sm:py-20">
+      <section className="page-canvas py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <span className="text-sm font-semibold text-ocean">Why Us</span>
-            <h2 className="mt-1 text-3xl font-bold text-navy sm:text-4xl">
+          <div className="flex flex-col items-center text-center">
+            <span className="eyebrow">Why Us</span>
+            <h2 className="mt-2 text-3xl font-bold text-navy sm:text-4xl">
               Life at HKM Vizag
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-gray-500">
@@ -409,9 +437,9 @@ export default function HomePage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: i * 0.1 }}
-                className="group rounded-2xl border border-gray-200 bg-white p-6 transition-all duration-300 hover:shadow-xl hover:shadow-navy/5 hover:-translate-y-1"
+                className="group rounded-2xl border border-white/70 bg-white p-6 shadow-lift ring-1 ring-navy/[0.04] transition-all duration-300 hover:shadow-glow hover:-translate-y-1"
               >
-                <div className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${item.color} text-white shadow-lg transition-transform group-hover:scale-110`}>
+                <div className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${item.color} text-white shadow-lg transition-transform group-hover:scale-110 group-hover:rotate-3`}>
                   <item.icon className="h-5 w-5" />
                 </div>
                 <h3 className="mt-4 text-lg font-bold text-navy">
@@ -427,11 +455,12 @@ export default function HomePage() {
       </section>
 
       {/* Testimonial */}
-      <section className="bg-white py-16 sm:py-20">
+      <section className="page-canvas py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-navy via-[#0a2d6e] to-ocean p-8 sm:p-12 lg:p-16">
-            <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-cyan/10" />
-            <div className="absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-gold/10" />
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-navy via-[#2a1d6b] to-ocean p-8 sm:p-12 lg:p-16">
+            <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-cyan/15 animate-float" />
+            <div className="absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-gold/15 animate-float-delayed" />
+            <div className="absolute right-1/3 top-1/2 h-40 w-40 rounded-full bg-plum/20 animate-float-slow" />
             <div className="relative">
               <Award className="h-10 w-10 text-gold" />
               <blockquote className="mt-6 max-w-2xl text-xl font-medium text-white/90 sm:text-2xl leading-relaxed">
@@ -454,7 +483,7 @@ export default function HomePage() {
       </section>
 
       {/* CTA */}
-      <section className="bg-background py-16 sm:py-20">
+      <section className="page-canvas py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}

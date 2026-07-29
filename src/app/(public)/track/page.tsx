@@ -85,7 +85,7 @@ export default function TrackPage() {
   return (
     <div className="overflow-hidden">
       {/* Hero */}
-      <section className="relative bg-gradient-to-br from-navy via-[#0a2d6e] to-ocean py-20 sm:py-28">
+      <section className="relative bg-gradient-to-br from-navy via-[#2a1d6b] to-ocean py-20 sm:py-28">
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-cyan/10 animate-float" />
           <div className="absolute -bottom-32 -left-32 h-[400px] w-[400px] rounded-full bg-gold/10 animate-float-delayed" />
@@ -106,7 +106,7 @@ export default function TrackPage() {
       </section>
 
       {/* Search Card */}
-      <section className="relative py-8 pb-16 bg-background">
+      <section className="page-canvas relative py-8 pb-16">
         <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm, Controller } from 'react-hook-form';
@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft,
+  ArrowRight,
   Upload,
   CheckCircle,
   FileText,
@@ -35,7 +36,87 @@ import {
 import { getPublicJobBySlug, submitApplication } from '@/lib/services';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
+import { DatePicker } from '@/components/ui/DatePicker';
+import { SelectField } from '@/components/ui/SelectField';
+import { useIsMobile } from '@/lib/useMediaQuery';
 import type { Job } from '@/types';
+
+type SectionKey = 'personal' | 'experience' | 'educational' | 'whyHire' | 'resume' | 'profiles';
+
+interface StepPlan {
+  layout: Record<SectionKey, number>;
+  titles: string[];
+}
+
+/**
+ * Which step each section appears on.
+ *
+ * Desktop pairs personal details with work experience and normally runs in two steps,
+ * gaining a third only when the job asks for educational details. Mobile always runs in
+ * three. The final step always carries the resume plus the optional online profiles;
+ * the "why should we hire you" prompt stays on the middle step except on mobile when
+ * education is also asked, where it moves to the last step to keep step 2 manageable.
+ */
+function getStepPlan(isMobile: boolean, asksEducation: boolean): StepPlan {
+  if (isMobile) {
+    return asksEducation
+      ? {
+          layout: { personal: 1, experience: 2, educational: 2, whyHire: 3, resume: 3, profiles: 3 },
+          titles: ['Your Details', 'Experience & Education', 'Resume & Profiles'],
+        }
+      : {
+          layout: { personal: 1, experience: 2, educational: 2, whyHire: 2, resume: 2, profiles: 3 },
+          titles: ['Your Details', 'Experience & Documents', 'Online Profiles'],
+        };
+  }
+  return asksEducation
+    ? {
+        layout: { personal: 1, experience: 1, educational: 2, whyHire: 2, resume: 3, profiles: 3 },
+        titles: ['About You', 'Education & Motivation', 'Resume & Profiles'],
+      }
+    : {
+        layout: { personal: 1, experience: 1, educational: 2, whyHire: 2, resume: 2, profiles: 2 },
+        titles: ['About You', 'Documents & Profiles'],
+      };
+}
+
+/** Fields validated before leaving each section. */
+const SECTION_FIELDS: Record<SectionKey, (keyof FormData)[]> = {
+  personal: ['name', 'email', 'phone', 'location', 'gender', 'dateOfBirth'],
+  experience: ['availableToJoin', 'currentLocation'],
+  educational: ['highestDegree', 'collegeName', 'collegeCity', 'studyYears'],
+  whyHire: ['coverLetter'],
+  // The resume is a File in component state, not part of the Zod schema.
+  resume: [],
+  profiles: ['linkedinUrl', 'githubUrl', 'portfolioUrl'],
+};
+
+const GENDER_OPTIONS = [
+  { value: 'male', label: 'Male' },
+  { value: 'female', label: 'Female' },
+  { value: 'other', label: 'Other' },
+  { value: 'prefer-not-to-say', label: 'Prefer not to say' },
+];
+
+const DEGREE_OPTIONS = [
+  { value: '10th', label: '10th' },
+  { value: '12th / Intermediate', label: '12th / Intermediate' },
+  { value: 'Diploma', label: 'Diploma' },
+  { value: 'B.Tech / B.E.', label: 'B.Tech / B.E.' },
+  { value: 'B.Sc', label: 'B.Sc' },
+  { value: 'B.Com', label: 'B.Com' },
+  { value: 'B.A.', label: 'B.A.' },
+  { value: 'BBA', label: 'BBA' },
+  { value: 'BCA', label: 'BCA' },
+  { value: 'M.Tech / M.E.', label: 'M.Tech / M.E.' },
+  { value: 'M.Sc', label: 'M.Sc' },
+  { value: 'M.Com', label: 'M.Com' },
+  { value: 'M.A.', label: 'M.A.' },
+  { value: 'MBA', label: 'MBA' },
+  { value: 'MCA', label: 'MCA' },
+  { value: 'PhD', label: 'PhD' },
+  { value: 'Other', label: 'Other' },
+];
 
 const schema = z.object({
   name: z.string().min(1, 'Full name is required'),
@@ -79,19 +160,118 @@ export default function ApplyPage() {
   const [showGithub, setShowGithub] = useState(false);
   const [showPortfolio, setShowPortfolio] = useState(false);
 
+  const isMobile = useIsMobile();
+  const [step, setStep] = useState(1);
+  const formTopRef = useRef<HTMLDivElement>(null);
+
   const {
     register,
     handleSubmit,
     watch,
     control,
     setValue,
+    setError,
+    trigger,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { isExperienced: false },
+    // Controlled fields need an empty-string default, otherwise they start as
+    // `undefined` and Zod reports a generic "Required" instead of our message.
+    defaultValues: {
+      isExperienced: false,
+      gender: '',
+      dateOfBirth: '',
+      lastEmploymentFrom: '',
+      lastEmploymentTo: '',
+      highestDegree: '',
+    },
   });
 
   const isExperienced = watch('isExperienced');
+
+  const asksEducation = !!job?.askEducationalDetails;
+  const { layout, titles: stepTitles } = getStepPlan(isMobile, asksEducation);
+  const totalSteps = stepTitles.length;
+  const showsSection = (key: SectionKey) => layout[key] === step;
+
+  // Switching breakpoints changes the step count, so keep `step` in range.
+  useEffect(() => {
+    setStep((s) => Math.min(s, totalSteps));
+  }, [totalSteps]);
+
+  // The success screen replaces the form, so reset the scroll position to show it.
+  useEffect(() => {
+    if (submitted) window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [submitted]);
+
+  const scrollToFormTop = () => {
+    formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  /** Fields belonging to the given step, skipping sections that aren't shown. */
+  const fieldsForStep = (target: number): (keyof FormData)[] => {
+    const keys = (Object.keys(layout) as SectionKey[]).filter((k) => layout[k] === target);
+    return keys.flatMap((k) => {
+      if (k === 'educational' && !job?.askEducationalDetails) return [];
+      return SECTION_FIELDS[k];
+    });
+  };
+
+  /**
+   * Educational details are required only when the job asks for them, so the rule
+   * lives here rather than in the Zod schema. Returns false and flags the fields
+   * when any are blank.
+   */
+  const validateEducational = () => {
+    if (!job?.askEducationalDetails) return true;
+    const eduFields = [
+      { name: 'highestDegree' as const, message: 'Highest degree is required' },
+      { name: 'collegeName' as const, message: 'College name is required' },
+      { name: 'collegeCity' as const, message: 'College city is required' },
+      { name: 'studyYears' as const, message: 'Study years are required' },
+    ];
+    const missing = eduFields.filter((f) => !watch(f.name)?.trim());
+    missing.forEach((f) => setError(f.name, { type: 'manual', message: f.message }));
+    return missing.length === 0;
+  };
+
+  const handleContinue = async () => {
+    const valid = await trigger(fieldsForStep(step), { shouldFocus: true });
+    if (!valid) return;
+
+    if (layout.educational === step && !validateEducational()) {
+      document.getElementById('educational-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    // The resume is component state, so the Zod resolver can't cover it.
+    if (layout.resume === step && !file) {
+      setFileError('Resume is required');
+      document.getElementById('resume-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    setStep((s) => Math.min(s + 1, totalSteps));
+    scrollToFormTop();
+  };
+
+  const handleBack = () => {
+    setStep((s) => Math.max(s - 1, 1));
+    scrollToFormTop();
+  };
+
+  /** If validation fails, jump to the step holding the first offending field. */
+  const onInvalid = (formErrors: typeof errors) => {
+    const firstField = Object.keys(formErrors)[0] as keyof FormData | undefined;
+    if (!firstField) return;
+    const owner = (Object.keys(SECTION_FIELDS) as SectionKey[]).find((k) =>
+      SECTION_FIELDS[k].includes(firstField),
+    );
+    if (owner && layout[owner] !== step) {
+      setStep(layout[owner]);
+      scrollToFormTop();
+    }
+  };
 
   useEffect(() => {
     async function load() {
@@ -137,11 +317,26 @@ export default function ApplyPage() {
   };
 
   const onSubmit = async (data: FormData) => {
-    if (!file) {
-      setFileError('Resume is required');
+    if (!job) return;
+
+    // These sections may live on an earlier step, so switch to it before scrolling —
+    // otherwise the error lands on hidden markup and the submit looks like a no-op.
+    if (!validateEducational()) {
+      setStep(layout.educational);
+      requestAnimationFrame(() =>
+        document.getElementById('educational-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' }),
+      );
       return;
     }
-    if (!job) return;
+
+    if (!file) {
+      setFileError('Resume is required');
+      setStep(layout.resume);
+      requestAnimationFrame(() =>
+        document.getElementById('resume-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' }),
+      );
+      return;
+    }
     setSubmitting(true);
     setGlobalError('');
     try {
@@ -174,12 +369,14 @@ export default function ApplyPage() {
       const result = await submitApplication(formData);
       setApplicationId(result.application.id);
       setSubmitted(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
       setGlobalError(
         axiosErr.response?.data?.message ||
           (err instanceof Error ? err.message : 'Failed to submit application. Please try again.'),
       );
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setSubmitting(false);
     }
@@ -246,9 +443,9 @@ export default function ApplyPage() {
     typeof job?.department === 'object' && job.department !== null ? job.department.name : '';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-gray-100/60 to-ocean/[0.04]">
+    <div className="page-canvas min-h-screen">
       {/* Hero banner */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-navy via-[#0a2d6e] to-ocean py-10 sm:py-14">
+      <div className="relative overflow-hidden bg-gradient-to-br from-navy via-[#2a1d6b] to-ocean py-6 sm:py-14">
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-20 -right-20 h-[300px] w-[300px] rounded-full bg-cyan/10 animate-float" />
           <div className="absolute -bottom-16 -left-16 h-[200px] w-[200px] rounded-full bg-gold/10 animate-float-delayed" />
@@ -285,26 +482,61 @@ export default function ApplyPage() {
       </div>
 
       {/* Form container */}
-      <div className="mx-auto max-w-3xl px-4 sm:px-6 py-8 pb-16 bg-background">
+      <div ref={formTopRef} className="mx-auto max-w-3xl px-4 sm:px-6 py-5 pb-12 sm:py-8 sm:pb-16 scroll-mt-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="overflow-hidden rounded-3xl border border-gray-300/70 bg-white shadow-2xl shadow-navy/10"
+          className="overflow-hidden rounded-3xl border border-hairline bg-white shadow-2xl shadow-navy/15 ring-1 ring-navy/[0.03]"
         >
           {/* Gradient top bar */}
-          <div className="h-2 bg-gradient-to-r from-navy via-ocean to-cyan" />
+          <div className="h-2 bg-gradient-to-r from-navy via-plum to-cyan" />
 
-          <div className="p-6 sm:p-8 lg:p-10">
+          <div className="p-5 sm:p-8 lg:p-10">
             {/* Section header */}
-            <div className="flex items-center gap-3 pb-6 border-b border-gray-100">
+            <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-navy to-ocean text-white shadow-md shadow-navy/20">
                 <Sparkles className="h-5 w-5" />
               </div>
               <div>
                 <h2 className="text-lg font-bold text-navy">Apply for this Position</h2>
-                <p className="text-sm text-gray-400">Fill in your details below to get started</p>
+                <p className="text-sm text-gray-400">
+                  Step {step} of {totalSteps} — {stepTitles[step - 1]}
+                </p>
               </div>
+            </div>
+
+            {/* Progress stepper */}
+            <div className="mt-5 flex items-center gap-2 border-b border-hairline pb-6">
+              {Array.from({ length: totalSteps }, (_, i) => i + 1).map((n) => (
+                <div key={n} className="flex flex-1 items-center gap-2">
+                  <div
+                    className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold transition-all ${
+                      n < step
+                        ? 'bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-sm'
+                        : n === step
+                          ? 'bg-gradient-to-br from-navy to-ocean text-white shadow-md shadow-navy/25'
+                          : 'bg-surfaceSunken text-gray-400'
+                    }`}
+                  >
+                    {n < step ? <CheckCircle className="h-4 w-4" /> : n}
+                  </div>
+                  <div
+                    className={`hidden flex-1 text-xs font-semibold sm:block ${
+                      n === step ? 'text-navy' : 'text-gray-400'
+                    }`}
+                  >
+                    {stepTitles[n - 1]}
+                  </div>
+                  {n < totalSteps && (
+                    <div
+                      className={`h-1 flex-1 rounded-full sm:max-w-[2rem] ${
+                        n < step ? 'bg-gradient-to-r from-emerald-500 to-teal-500' : 'bg-surfaceSunken'
+                      }`}
+                    />
+                  )}
+                </div>
+              ))}
             </div>
 
             {globalError && (
@@ -313,16 +545,16 @@ export default function ApplyPage() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-8">
+            <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="mt-6 space-y-6 sm:mt-8 sm:space-y-8">
               {/* Section: Personal Info */}
-              <div>
+              <div className={showsSection('personal') ? '' : 'hidden'}>
                 <h3 className="flex items-center gap-2 text-sm font-bold text-navy uppercase tracking-wider">
                   <div className="flex h-6 w-6 items-center justify-center rounded-md bg-navy/10">
                     <User className="h-3.5 w-3.5 text-navy" />
                   </div>
                   Personal Information
                 </h3>
-                <div className="mt-4 space-y-5 rounded-2xl border border-gray-200/80 bg-gradient-to-br from-gray-50 to-gray-100/50 p-5 sm:p-6 shadow-inner">
+                <div className="mt-4 space-y-4 rounded-2xl border border-gray-200/80 bg-gradient-to-br from-gray-50 to-gray-100/50 p-4 sm:space-y-5 sm:p-6 shadow-inner">
                   {/* Name */}
                   <div>
                     <label className="mb-1.5 block text-sm font-semibold text-gray-700">
@@ -343,7 +575,7 @@ export default function ApplyPage() {
                   </div>
 
                   {/* Email + Phone */}
-                  <div className="grid gap-5 sm:grid-cols-2">
+                  <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">
                     <div>
                       <label className="mb-1.5 block text-sm font-semibold text-gray-700">
                         Email Address <span className="text-red-500">*</span>
@@ -381,7 +613,7 @@ export default function ApplyPage() {
                   </div>
 
                   {/* Location + Gender + DOB */}
-                  <div className="grid gap-5 sm:grid-cols-3">
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5">
                     <div>
                       <label className="mb-1.5 block text-sm font-semibold text-gray-700">
                         Location <span className="text-red-500">*</span>
@@ -392,7 +624,7 @@ export default function ApplyPage() {
                           type="text"
                           placeholder="e.g. Visakhapatnam"
                           {...register('location')}
-                          className={`w-full rounded-xl border bg-white py-3.5 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.location ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
+                          className={`h-[50px] w-full rounded-xl border bg-white pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.location ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
                         />
                       </div>
                       {errors.location && <p className="mt-1.5 text-xs text-red-500">{errors.location.message}</p>}
@@ -401,26 +633,40 @@ export default function ApplyPage() {
                       <label className="mb-1.5 block text-sm font-semibold text-gray-700">
                         Gender <span className="text-red-500">*</span>
                       </label>
-                      <select
-                        {...register('gender')}
-                        className={`w-full rounded-xl border bg-white py-3.5 px-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.gender ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
-                      >
-                        <option value="">Select</option>
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
-                        <option value="other">Other</option>
-                        <option value="prefer-not-to-say">Prefer not to say</option>
-                      </select>
+                      <Controller
+                        control={control}
+                        name="gender"
+                        render={({ field }) => (
+                          <SelectField
+                            value={field.value}
+                            onChange={field.onChange}
+                            options={GENDER_OPTIONS}
+                            placeholder="Select gender"
+                            error={!!errors.gender}
+                            icon={User}
+                          />
+                        )}
+                      />
                       {errors.gender && <p className="mt-1.5 text-xs text-red-500">{errors.gender.message}</p>}
                     </div>
-                    <div>
+                    <div className="col-span-2 sm:col-span-1">
                       <label className="mb-1.5 block text-sm font-semibold text-gray-700">
                         Date of Birth <span className="text-red-500">*</span>
                       </label>
-                      <input
-                        type="date"
-                        {...register('dateOfBirth')}
-                        className={`w-full rounded-xl border bg-white py-3.5 px-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.dateOfBirth ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
+                      <Controller
+                        control={control}
+                        name="dateOfBirth"
+                        render={({ field }) => (
+                          <DatePicker
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="Select your date of birth"
+                            error={!!errors.dateOfBirth}
+                            disableFuture
+                            minYear={1950}
+                            maxYear={new Date().getFullYear()}
+                          />
+                        )}
                       />
                       {errors.dateOfBirth && <p className="mt-1.5 text-xs text-red-500">{errors.dateOfBirth.message}</p>}
                     </div>
@@ -429,7 +675,7 @@ export default function ApplyPage() {
               </div>
 
               {/* Section: Experience */}
-              <div>
+              <div className={showsSection('experience') ? '' : 'hidden'}>
                 <h3 className="flex items-center gap-2 text-sm font-bold text-navy uppercase tracking-wider">
                   <div className="flex h-6 w-6 items-center justify-center rounded-md bg-ocean/10">
                     <Briefcase className="h-3.5 w-3.5 text-ocean" />
@@ -517,10 +763,12 @@ export default function ApplyPage() {
                             <Calendar className="mr-1 inline h-3.5 w-3.5 text-gray-400" />
                             Employment From
                           </label>
-                          <input
-                            type="date"
-                            {...register('lastEmploymentFrom')}
-                            className="w-full rounded-xl border border-gray-300 bg-white py-3 px-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean"
+                          <Controller
+                            control={control}
+                            name="lastEmploymentFrom"
+                            render={({ field }) => (
+                              <DatePicker value={field.value} onChange={field.onChange} placeholder="Start date" disableFuture />
+                            )}
                           />
                         </div>
                         <div>
@@ -528,10 +776,12 @@ export default function ApplyPage() {
                             <Calendar className="mr-1 inline h-3.5 w-3.5 text-gray-400" />
                             Employment To
                           </label>
-                          <input
-                            type="date"
-                            {...register('lastEmploymentTo')}
-                            className="w-full rounded-xl border border-gray-300 bg-white py-3 px-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean"
+                          <Controller
+                            control={control}
+                            name="lastEmploymentTo"
+                            render={({ field }) => (
+                              <DatePicker value={field.value} onChange={field.onChange} placeholder="End date" disableFuture />
+                            )}
                           />
                         </div>
                       </div>
@@ -572,7 +822,7 @@ export default function ApplyPage() {
               </div>
 
               {/* Section: Online Profiles */}
-              <div>
+              <div className={showsSection('profiles') ? '' : 'hidden'}>
                 <h3 className="flex items-center gap-2 text-sm font-bold text-navy uppercase tracking-wider">
                   <div className="flex h-6 w-6 items-center justify-center rounded-md bg-purple-100">
                     <Globe className="h-3.5 w-3.5 text-purple-600" />
@@ -657,7 +907,7 @@ export default function ApplyPage() {
 
               {/* Section: Educational Details (conditional) */}
               {job?.askEducationalDetails && (
-                <div>
+                <div id="educational-section" className={showsSection('educational') ? '' : 'hidden'}>
                   <h3 className="flex items-center gap-2 text-sm font-bold text-navy uppercase tracking-wider">
                     <div className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-100">
                       <GraduationCap className="h-3.5 w-3.5 text-emerald-600" />
@@ -668,48 +918,41 @@ export default function ApplyPage() {
                     <div className="grid gap-5 sm:grid-cols-2">
                       <div>
                         <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                          Highest Degree
+                          Highest Degree <span className="text-red-500">*</span>
                         </label>
-                        <select
-                          {...register('highestDegree')}
-                          className="w-full rounded-xl border border-gray-300 bg-white py-3.5 px-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean"
-                        >
-                          <option value="">Select degree</option>
-                          <option value="10th">10th</option>
-                          <option value="12th / Intermediate">12th / Intermediate</option>
-                          <option value="Diploma">Diploma</option>
-                          <option value="B.Tech / B.E.">B.Tech / B.E.</option>
-                          <option value="B.Sc">B.Sc</option>
-                          <option value="B.Com">B.Com</option>
-                          <option value="B.A.">B.A.</option>
-                          <option value="BBA">BBA</option>
-                          <option value="BCA">BCA</option>
-                          <option value="M.Tech / M.E.">M.Tech / M.E.</option>
-                          <option value="M.Sc">M.Sc</option>
-                          <option value="M.Com">M.Com</option>
-                          <option value="M.A.">M.A.</option>
-                          <option value="MBA">MBA</option>
-                          <option value="MCA">MCA</option>
-                          <option value="PhD">PhD</option>
-                          <option value="Other">Other</option>
-                        </select>
+                        <Controller
+                          control={control}
+                          name="highestDegree"
+                          render={({ field }) => (
+                            <SelectField
+                              value={field.value}
+                              onChange={field.onChange}
+                              options={DEGREE_OPTIONS}
+                              placeholder="Select degree"
+                              error={!!errors.highestDegree}
+                              icon={GraduationCap}
+                            />
+                          )}
+                        />
+                        {errors.highestDegree && <p className="mt-1.5 text-xs text-red-500">{errors.highestDegree.message}</p>}
                       </div>
                       <div>
                         <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                          College / University Name
+                          College / University Name <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
                           placeholder="e.g. GITAM University"
                           {...register('collegeName')}
-                          className="w-full rounded-xl border border-gray-300 bg-white py-3.5 px-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean"
+                          className={`w-full rounded-xl border bg-white py-3.5 px-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.collegeName ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
                         />
+                        {errors.collegeName && <p className="mt-1.5 text-xs text-red-500">{errors.collegeName.message}</p>}
                       </div>
                     </div>
                     <div className="grid gap-5 sm:grid-cols-2">
                       <div>
                         <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                          College City
+                          College City <span className="text-red-500">*</span>
                         </label>
                         <div className="relative">
                           <MapPin className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -717,36 +960,61 @@ export default function ApplyPage() {
                             type="text"
                             placeholder="e.g. Visakhapatnam"
                             {...register('collegeCity')}
-                            className="w-full rounded-xl border border-gray-300 bg-white py-3.5 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean"
+                            className={`w-full rounded-xl border bg-white py-3.5 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.collegeCity ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
                           />
                         </div>
+                        {errors.collegeCity && <p className="mt-1.5 text-xs text-red-500">{errors.collegeCity.message}</p>}
                       </div>
                       <div>
                         <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                          Study Years
+                          Study Years <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
                           placeholder="e.g. 2020 - 2024"
                           {...register('studyYears')}
-                          className="w-full rounded-xl border border-gray-300 bg-white py-3.5 px-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean"
+                          className={`w-full rounded-xl border bg-white py-3.5 px-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.studyYears ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
                         />
+                        {errors.studyYears && <p className="mt-1.5 text-xs text-red-500">{errors.studyYears.message}</p>}
                       </div>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Section: Documents */}
-              <div>
+              {/* Section: Why should we hire you */}
+              <div id="whyhire-section" className={showsSection('whyHire') ? '' : 'hidden'}>
+                <h3 className="flex items-center gap-2 text-sm font-bold text-navy uppercase tracking-wider">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-md bg-rose/10">
+                    <Star className="h-3.5 w-3.5 text-rose" />
+                  </div>
+                  Your Motivation
+                </h3>
+                <div className="mt-4 rounded-2xl border border-gray-200/80 bg-gradient-to-br from-rose/[0.03] to-gray-100/30 p-4 sm:p-6 shadow-inner">
+                  <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+                    Why should we hire you? <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    placeholder="Tell us why you'd be a great fit for this role, what unique skills you bring, and what motivates you to join HKM Vizag..."
+                    rows={5}
+                    {...register('coverLetter')}
+                    className={`w-full rounded-xl border bg-white px-4 py-3.5 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean resize-none ${errors.coverLetter ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
+                  />
+                  {errors.coverLetter && (
+                    <p className="mt-1.5 text-xs text-red-500">{errors.coverLetter.message}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Section: Resume */}
+              <div id="resume-section" className={showsSection('resume') ? '' : 'hidden'}>
                 <h3 className="flex items-center gap-2 text-sm font-bold text-navy uppercase tracking-wider">
                   <div className="flex h-6 w-6 items-center justify-center rounded-md bg-gold/15">
                     <FileText className="h-3.5 w-3.5 text-goldDeep" />
                   </div>
-                  Documents
+                  Resume
                 </h3>
-                <div className="mt-4 space-y-5 rounded-2xl border border-gray-200/80 bg-gradient-to-br from-gold/[0.03] to-gray-100/30 p-5 sm:p-6 shadow-inner">
-                  {/* Resume Upload */}
+                <div className="mt-4 rounded-2xl border border-gray-200/80 bg-gradient-to-br from-gold/[0.03] to-gray-100/30 p-4 sm:p-6 shadow-inner">
                   <div>
                     <label className="mb-1.5 block text-sm font-semibold text-gray-700">
                       Resume / CV <span className="text-red-500">*</span>
@@ -808,45 +1076,44 @@ export default function ApplyPage() {
                       <p className="mt-1.5 text-xs text-red-500">{fileError}</p>
                     )}
                   </div>
-
-                  {/* Why should we hire you */}
-                  <div>
-                    <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                      Why should we hire you? <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                      placeholder="Tell us why you'd be a great fit for this role, what unique skills you bring, and what motivates you to join HKM Vizag..."
-                      rows={5}
-                      {...register('coverLetter')}
-                      className={`w-full rounded-xl border bg-white px-4 py-3.5 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean resize-none ${errors.coverLetter ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
-                    />
-                    {errors.coverLetter && (
-                      <p className="mt-1.5 text-xs text-red-500">{errors.coverLetter.message}</p>
-                    )}
-                  </div>
                 </div>
               </div>
 
-              {/* Submit */}
-              <div className="rounded-2xl border border-ocean/10 bg-gradient-to-br from-navy/[0.02] to-ocean/[0.02] p-5 sm:p-6">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-start gap-2">
-                    <Shield className="mt-0.5 h-4 w-4 text-ocean" />
+              {/* Step navigation */}
+              <div className="rounded-2xl border border-ocean/15 bg-gradient-to-br from-navy/[0.03] via-plum/[0.02] to-ocean/[0.03] p-5 sm:p-6">
+                {step === totalSteps && (
+                  <div className="mb-4 flex items-start gap-2">
+                    <Shield className="mt-0.5 h-4 w-4 flex-shrink-0 text-ocean" />
                     <p className="text-xs text-gray-500 leading-relaxed">
                       By submitting, you agree to allow HKM Vizag to process your application data. Your information is kept confidential.
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
+                )}
+                <div className="flex items-center justify-between gap-3">
+                  {step > 1 ? (
+                    <Button variant="ghost" type="button" onClick={handleBack}>
+                      <ArrowLeft className="h-4 w-4" />
+                      Back
+                    </Button>
+                  ) : (
                     <Link href={`/jobs/${slug}`}>
                       <Button variant="ghost" type="button">
                         Cancel
                       </Button>
                     </Link>
+                  )}
+
+                  {step < totalSteps ? (
+                    <Button type="button" onClick={handleContinue} size="lg">
+                      Continue
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  ) : (
                     <Button type="submit" loading={submitting} size="lg">
                       <Send className="h-4 w-4" />
                       Submit Application
                     </Button>
-                  </div>
+                  )}
                 </div>
               </div>
             </form>

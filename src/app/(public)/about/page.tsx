@@ -44,7 +44,7 @@ export default function AboutPage() {
   return (
     <div className="overflow-hidden">
       {/* Hero */}
-      <section className="relative bg-gradient-to-br from-navy via-[#0a2d6e] to-ocean py-20 sm:py-28">
+      <section className="relative bg-gradient-to-br from-navy via-[#2a1d6b] to-ocean py-20 sm:py-28">
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-cyan/10 animate-float" />
           <div className="absolute -bottom-32 -left-32 h-[400px] w-[400px] rounded-full bg-gold/10 animate-float-delayed" />
@@ -65,7 +65,7 @@ export default function AboutPage() {
       </section>
 
       {/* Stats */}
-      <section className="relative -mt-8 bg-background">
+      <section className="page-canvas relative -mt-8">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {stats.map((stat) => (
@@ -103,7 +103,7 @@ export default function AboutPage() {
             </div>
             <div className="grid grid-cols-2 gap-5">
               {values.map((v) => (
-                <div key={v.title} className="rounded-2xl border border-gray-200 bg-background p-5 transition-all hover:shadow-lg hover:-translate-y-1">
+                <div key={v.title} className="rounded-2xl border border-white/70 bg-white p-5 shadow-lift ring-1 ring-navy/[0.04] transition-all hover:shadow-glow hover:-translate-y-1">
                   <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${v.color} text-white shadow-md`}>
                     <v.icon className="h-5 w-5" />
                   </div>
@@ -117,7 +117,7 @@ export default function AboutPage() {
       </section>
 
       {/* Benefits */}
-      <section className="bg-background py-16 sm:py-20">
+      <section className="page-canvas py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <span className="text-sm font-semibold text-ocean">Benefits</span>
@@ -166,7 +166,7 @@ export default function AboutPage() {
       </section>
 
       {/* CTA */}
-      <section className="bg-background py-16 sm:py-20">
+      <section className="page-canvas py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl font-bold text-navy sm:text-4xl">Want to Be Part of Our Story?</h2>
           <p className="mx-auto mt-4 max-w-xl text-gray-500">

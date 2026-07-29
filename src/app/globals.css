@@ -130,6 +130,70 @@ html {
   animation: countUp 0.6s ease-out forwards;
 }
 
+/* Layered page backdrop — deliberately tinted so white cards read as raised surfaces */
+.page-canvas {
+  position: relative;
+  background:
+    radial-gradient(55rem 55rem at 10% -12%, rgba(43, 205, 238, 0.18), transparent 58%),
+    radial-gradient(45rem 45rem at 95% 2%, rgba(109, 74, 255, 0.16), transparent 58%),
+    radial-gradient(50rem 50rem at 72% 102%, rgba(246, 184, 40, 0.14), transparent 60%),
+    radial-gradient(40rem 40rem at 30% 60%, rgba(14, 184, 166, 0.1), transparent 62%),
+    linear-gradient(180deg, #e8eef7 0%, #dde6f2 55%, #e6ecf6 100%);
+}
+
+/* Same wash on a darker footing, for bands that sit next to a white section */
+.page-canvas-deep {
+  position: relative;
+  background:
+    radial-gradient(50rem 50rem at 85% -10%, rgba(109, 74, 255, 0.2), transparent 58%),
+    radial-gradient(45rem 45rem at 8% 100%, rgba(43, 205, 238, 0.18), transparent 60%),
+    linear-gradient(180deg, #dfe7f3 0%, #d5e0ef 100%);
+}
+
+/* Subtle dotted texture for wide empty bands */
+.canvas-dots {
+  background-image: radial-gradient(rgba(5, 32, 87, 0.07) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* Section eyebrow label with a gradient rule */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0f618a;
+}
+.eyebrow::before {
+  content: '';
+  width: 1.75rem;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2bcdee, #6d4aff);
+}
+
+/* Accent top rule that reveals on hover */
+.accent-sweep {
+  position: relative;
+  overflow: hidden;
+}
+.accent-sweep::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, #052057, #0f618a, #2bcdee, #6d4aff, #f6b828);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s ease;
+}
+.accent-sweep:hover::after {
+  transform: scaleX(1);
+}
+
 /* Shimmer effect */
 @keyframes shimmer {
   0% { background-position: -200% 0; }

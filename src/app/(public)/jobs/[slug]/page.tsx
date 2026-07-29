@@ -129,9 +129,9 @@ export default function JobDetailPage() {
       : '';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-gray-100/60 to-ocean/[0.04]">
+    <div className="page-canvas min-h-screen">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-navy via-[#0a2d6e] to-ocean py-12 sm:py-16">
+      <section className="relative overflow-hidden bg-gradient-to-br from-navy via-[#2a1d6b] to-ocean py-12 sm:py-16">
         {/* Decorative floating circles */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-24 -right-24 h-[350px] w-[350px] rounded-full bg-cyan/10 animate-float" />
@@ -200,7 +200,7 @@ export default function JobDetailPage() {
       </section>
 
       {/* Main Content */}
-      <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 pb-8 bg-background">
+      <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 pb-8">
         <motion.div
           variants={staggerContainer}
           initial="hidden"
