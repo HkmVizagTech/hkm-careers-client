@@ -24,7 +24,7 @@ const navItems = [
   { href: '/admin/jobs', label: 'Jobs', icon: Briefcase },
   { href: '/admin/applications', label: 'Applications', icon: FileText },
   { href: '/admin/departments', label: 'Departments', icon: Building2 },
-  { href: '/admin/settings', label: 'Settings', icon: Settings },
+  { href: '/admin/settings', label: 'Settings & Team', icon: Settings },
 ];
 
 function SidebarContent({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {

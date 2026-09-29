@@ -51,5 +51,11 @@ export function useAuth() {
 
   const isAuthenticated = !!token;
 
-  return { token, user, loading, login, logout, isAuthenticated };
+  /** Updates the stored + in-memory session user (e.g. after a profile edit). */
+  const updateUser = useCallback((updated: AuthUser) => {
+    localStorage.setItem("user", JSON.stringify(updated));
+    setUser(updated);
+  }, []);
+
+  return { token, user, loading, login, logout, isAuthenticated, updateUser };
 }

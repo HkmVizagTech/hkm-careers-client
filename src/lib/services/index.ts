@@ -6,6 +6,8 @@ import type {
   ApplicationsResponse,
   Department,
   DashboardStats,
+  AdminUser,
+  AuthUser,
 } from "@/types";
 
 export async function getPublicJobs(params?: {
@@ -159,4 +161,27 @@ export async function deleteDepartment(id: string): Promise<void> {
 export async function getDashboardStats(): Promise<DashboardStats> {
   const { data } = await api.get("/dashboard/stats");
   return data;
+}
+
+export async function getAdminUsers(): Promise<AdminUser[]> {
+  const { data } = await api.get("/users");
+  return data.users;
+}
+
+export async function createAdminUser(input: {
+  name: string;
+  email: string;
+  password: string;
+}): Promise<AdminUser> {
+  const { data } = await api.post("/users", input);
+  return data.user;
+}
+
+export async function deleteAdminUser(id: string): Promise<void> {
+  await api.delete(`/users/${id}`);
+}
+
+export async function updateMyProfile(name: string): Promise<AuthUser> {
+  const { data } = await api.put("/users/me", { name });
+  return data.user;
 }

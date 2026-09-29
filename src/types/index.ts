@@ -78,6 +78,13 @@ export interface AuthUser {
   email: string;
 }
 
+export interface AdminUser {
+  _id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+}
+
 export interface PaginationInfo {
   total: number;
   page: number;
