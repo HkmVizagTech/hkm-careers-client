@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Search,
@@ -52,11 +52,20 @@ export default function TrackPage() {
   const [result, setResult] = useState<TrackedApplication | null>(null);
   const [error, setError] = useState('');
   const [searched, setSearched] = useState(false);
+  const resultsRef = useRef<HTMLDivElement>(null);
+
+  // Pre-fill the ID when arriving from the success screen (/track?id=...).
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('id');
+    if (id) setApplicationId(id);
+  }, []);
 
   const handleTrack = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = applicationId.trim();
     if (!trimmed) return;
+    // Dismiss the mobile keyboard so the results are visible.
+    (document.activeElement as HTMLElement | null)?.blur();
     setLoading(true);
     setError('');
     setResult(null);
@@ -78,6 +87,12 @@ export default function TrackPage() {
       setLoading(false);
     }
   };
+
+  // Once a search finishes, bring the outcome (result or error) into view.
+  useEffect(() => {
+    if (!searched || loading) return;
+    resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [searched, loading]);
 
   const isRejected = result?.status === 'rejected';
   const currentStepIndex = result ? getStepIndex(result.status) : -1;
@@ -145,12 +160,13 @@ export default function TrackPage() {
           </motion.div>
         </div>
 
-        {/* Loading */}
-        {loading && (
-          <div className="mx-auto mt-12 flex justify-center">
-            <Spinner size="lg" />
-          </div>
-        )}
+        {/* Loading / Error / Result — auto-scrolled to after each search */}
+        <div ref={resultsRef} className="scroll-mt-28">
+          {loading && (
+            <div className="mx-auto mt-12 flex justify-center">
+              <Spinner size="lg" />
+            </div>
+          )}
 
         {/* Error / Not Found */}
         {!loading && error && searched && (
@@ -444,10 +460,11 @@ export default function TrackPage() {
             </div>
             <p className="mt-4 text-sm text-gray-400 leading-relaxed">
               Your Application ID was provided when you submitted your application.
-              Check your confirmation page or email for the reference number.
+              Check your confirmation page, email, or WhatsApp message for the reference number.
             </p>
           </motion.div>
         )}
+        </div>
       </section>
     </div>
   );

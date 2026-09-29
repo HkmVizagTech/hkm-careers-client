@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm, Controller } from 'react-hook-form';
@@ -32,6 +32,11 @@ import {
   ExternalLink,
   Plus,
   GraduationCap,
+  Copy,
+  Eye,
+  Pencil,
+  Search,
+  MessageCircle,
 } from 'lucide-react';
 import { getPublicJobBySlug, submitApplication } from '@/lib/services';
 import { Button } from '@/components/ui/Button';
@@ -98,6 +103,13 @@ const GENDER_OPTIONS = [
   { value: 'prefer-not-to-say', label: 'Prefer not to say' },
 ];
 
+const GENDER_LABELS: Record<string, string> = {
+  male: 'Male',
+  female: 'Female',
+  other: 'Other',
+  'prefer-not-to-say': 'Prefer not to say',
+};
+
 const DEGREE_OPTIONS = [
   { value: '10th', label: '10th' },
   { value: '12th / Intermediate', label: '12th / Intermediate' },
@@ -121,10 +133,24 @@ const DEGREE_OPTIONS = [
 const schema = z.object({
   name: z.string().min(1, 'Full name is required'),
   email: z.string().email('Please enter a valid email address'),
-  phone: z.string().min(10, 'Please enter a valid phone number'),
+  phone: z
+    .string()
+    .min(10, 'Please enter a valid phone number')
+    .regex(/^[0-9+\-\s()]{10,15}$/, 'Please enter a valid phone number'),
   location: z.string().min(1, 'Location is required'),
   gender: z.string().min(1, 'Gender is required'),
-  dateOfBirth: z.string().min(1, 'Date of birth is required'),
+  dateOfBirth: z
+    .string()
+    .min(1, 'Date of birth is required')
+    .refine((v) => {
+      if (!v) return true;
+      const dob = new Date(v);
+      const today = new Date();
+      let age = today.getFullYear() - dob.getFullYear();
+      const m = today.getMonth() - dob.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age -= 1;
+      return age >= 14;
+    }, 'Applicant must be at least 14 years old'),
   coverLetter: z.string().min(10, 'Please write at least a few words'),
   isExperienced: z.boolean(),
   yearsOfExperience: z.string().optional(),
@@ -144,6 +170,40 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
+/** Shared field classes: full label + value stay visible with comfortable sizing. */
+const INPUT_CLASS =
+  'w-full rounded-xl border bg-white px-4 py-3.5 text-base sm:text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean';
+const inputCls = (hasError?: boolean) =>
+  `${INPUT_CLASS} ${hasError ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`;
+
+/** Wraps a label, control, and error text in one consistent block. */
+function Field({
+  label,
+  required,
+  error,
+  children,
+  hint,
+}: {
+  label: string;
+  required?: boolean;
+  error?: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label className="mb-1.5 flex items-baseline gap-2 text-sm font-semibold text-gray-700">
+        <span>
+          {label} {required && <span className="text-red-500">*</span>}
+        </span>
+        {hint && <span className="text-xs font-normal text-gray-400">{hint}</span>}
+      </label>
+      {children}
+      {error && <p className="mt-1.5 text-xs text-red-500">{error}</p>}
+    </div>
+  );
+}
+
 export default function ApplyPage() {
   const params = useParams();
   const router = useRouter();
@@ -155,6 +215,7 @@ export default function ApplyPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [applicationId, setApplicationId] = useState('');
+  const [copied, setCopied] = useState(false);
   const [globalError, setGlobalError] = useState('');
   const [showLinkedin, setShowLinkedin] = useState(false);
   const [showGithub, setShowGithub] = useState(false);
@@ -163,6 +224,8 @@ export default function ApplyPage() {
   const isMobile = useIsMobile();
   const [step, setStep] = useState(1);
   const formTopRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const navRef = useRef<HTMLDivElement>(null);
 
   const {
     register,
@@ -206,6 +269,35 @@ export default function ApplyPage() {
 
   const scrollToFormTop = () => {
     formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  /**
+   * Enter-key navigation for text inputs: focus the next visible input on the step,
+   * or — on the last one — dismiss the on-screen keyboard. Textareas keep Enter for
+   * line breaks, and the custom select/date triggers handle their own activation.
+   */
+  const handleFormKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    if (e.key !== 'Enter') return;
+    const target = e.target as HTMLInputElement;
+    if (target.tagName !== 'INPUT' || target.type === 'file' || target.type === 'submit') return;
+    e.preventDefault();
+
+    // `offsetParent` is null for inputs inside the hidden (non-active) step sections.
+    const inputs = Array.from(
+      formRef.current?.querySelectorAll<HTMLInputElement>('input') ?? [],
+    ).filter((el) => el.type !== 'file' && el.offsetParent !== null);
+    const idx = inputs.indexOf(target);
+    const next = inputs[idx + 1];
+
+    if (next) {
+      next.focus();
+      const end = next.value.length;
+      next.setSelectionRange?.(end, end);
+    } else {
+      // Last field: close the keyboard and reveal the step navigation.
+      target.blur();
+      navRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
   };
 
   /** Fields belonging to the given step, skipping sections that aren't shown. */
@@ -382,6 +474,55 @@ export default function ApplyPage() {
     }
   };
 
+  /** Reads the filled data for the review summary, memoized to avoid recompute churn. */
+  const formData = watch();
+  const reviewRows = useMemo(() => {
+    const rows: { label: string; value: string }[] = [
+      { label: 'Name', value: formData.name || '' },
+      { label: 'Email', value: formData.email || '' },
+      { label: 'Phone', value: formData.phone || '' },
+      { label: 'Gender', value: formData.gender ? GENDER_LABELS[formData.gender] || formData.gender : '' },
+      { label: 'Date of Birth', value: formData.dateOfBirth || '' },
+      { label: 'Location', value: formData.location || '' },
+      { label: 'Available to Join', value: formData.availableToJoin || '' },
+      { label: 'Current Location', value: formData.currentLocation || '' },
+    ];
+    if (formData.isExperienced) {
+      rows.push(
+        { label: 'Experience', value: formData.yearsOfExperience ? `${formData.yearsOfExperience} years` : '' },
+        { label: 'Last Employer', value: formData.lastEmployer || '' },
+      );
+    }
+    if (job?.askEducationalDetails) {
+      rows.push(
+        { label: 'Highest Degree', value: formData.highestDegree || '' },
+        { label: 'College', value: [formData.collegeName, formData.collegeCity].filter(Boolean).join(', ') },
+        { label: 'Study Years', value: formData.studyYears || '' },
+      );
+    }
+    if (formData.linkedinUrl) rows.push({ label: 'LinkedIn', value: formData.linkedinUrl });
+    if (formData.githubUrl) rows.push({ label: 'GitHub', value: formData.githubUrl });
+    if (formData.portfolioUrl) rows.push({ label: 'Portfolio', value: formData.portfolioUrl });
+    return rows.filter((r) => r.value);
+  }, [formData, job]);
+
+  /** Jump to the step that owns a section, for "Edit" links in the review card. */
+  const stepOfSection = (key: SectionKey) => layout[key];
+
+  const handleCopyId = async () => {
+    try {
+      await navigator.clipboard.writeText(applicationId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      /* Clipboard unavailable — the selectable ID text is the fallback. */
+    }
+  };
+
+  const whatsappText = encodeURIComponent(
+    `My application for ${job?.title || 'the position'} at HKM Vizag was submitted successfully! 🎉\n\nApplication ID: ${applicationId}\n\nI can track its status anytime here: ${typeof window !== 'undefined' ? window.location.origin : ''}/track?id=${applicationId}`,
+  );
+
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center bg-background">
@@ -393,7 +534,7 @@ export default function ApplyPage() {
   if (submitted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-white to-green-50/30">
-        <div className="mx-auto max-w-lg px-4 py-20 text-center">
+        <div className="mx-auto max-w-lg px-4 py-16 text-center sm:py-20">
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
@@ -420,17 +561,52 @@ export default function ApplyPage() {
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
                     Application Reference
                   </p>
-                  <p className="mt-2 font-mono text-xl font-bold text-navy">{applicationId}</p>
-                  <p className="mt-1 text-xs text-gray-400">Save this for your records</p>
+                  <button
+                    type="button"
+                    onClick={handleCopyId}
+                    title="Tap to copy"
+                    className="mt-2 inline-flex items-center gap-2 rounded-xl bg-gray-50 px-4 py-2.5 font-mono text-lg font-bold text-navy transition-colors hover:bg-ocean/10 hover:text-ocean sm:text-xl"
+                  >
+                    {applicationId}
+                    {copied ? (
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <Copy className="h-4 w-4 text-gray-400" />
+                    )}
+                  </button>
+                  <p className="mt-1.5 text-xs text-gray-400">
+                    {copied ? 'Copied to clipboard!' : 'Tap the ID to copy it'}
+                  </p>
+                  <div className="mt-3 rounded-xl bg-green-50 px-4 py-3 text-left">
+                    <p className="flex items-start gap-2 text-xs leading-relaxed text-green-800">
+                      <MessageCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      Tip: share or save your Application ID via WhatsApp so you always have it —
+                      you&apos;ll need it to track your status.
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
             <div className="mt-10 flex flex-wrap justify-center gap-3">
+              <a href={`https://wa.me/?text=${whatsappText}`} target="_blank" rel="noopener noreferrer">
+                <Button variant="primary" size="lg" className="bg-[#25D366] hover:bg-[#1fb857]">
+                  <MessageCircle className="h-4 w-4" />
+                  Send via WhatsApp
+                </Button>
+              </a>
+              <Link href={`/track?id=${applicationId}`}>
+                <Button variant="outline" size="lg">
+                  <Search className="h-4 w-4" />
+                  Track Status
+                </Button>
+              </Link>
+            </div>
+            <div className="mt-4 flex flex-wrap justify-center gap-3">
               <Link href="/jobs">
-                <Button variant="primary" size="lg">Browse More Jobs</Button>
+                <Button variant="ghost" size="md">Browse More Jobs</Button>
               </Link>
               <Link href="/">
-                <Button variant="outline" size="lg">Back to Home</Button>
+                <Button variant="ghost" size="md">Back to Home</Button>
               </Link>
             </div>
           </motion.div>
@@ -545,7 +721,7 @@ export default function ApplyPage() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="mt-6 space-y-6 sm:mt-8 sm:space-y-8">
+            <form ref={formRef} onKeyDown={handleFormKeyDown} onSubmit={handleSubmit(onSubmit, onInvalid)} className="mt-6 space-y-6 sm:mt-8 sm:space-y-8">
               {/* Section: Personal Info */}
               <div className={showsSection('personal') ? '' : 'hidden'}>
                 <h3 className="flex items-center gap-2 text-sm font-bold text-navy uppercase tracking-wider">
@@ -556,68 +732,54 @@ export default function ApplyPage() {
                 </h3>
                 <div className="mt-4 space-y-4 rounded-2xl border border-gray-200/80 bg-gradient-to-br from-gray-50 to-gray-100/50 p-4 sm:space-y-5 sm:p-6 shadow-inner">
                   {/* Name */}
-                  <div>
-                    <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                      Full Name <span className="text-red-500">*</span>
-                    </label>
+                  <Field label="Full Name" required error={errors.name?.message}>
                     <div className="relative">
                       <User className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                       <input
                         type="text"
+                        enterKeyHint="next"
                         placeholder="Enter your full name"
                         {...register('name')}
-                        className={`w-full rounded-xl border bg-white py-3.5 pl-10 pr-4 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.name ? 'border-red-400 bg-red-50/30' : 'border-gray-300 shadow-sm'}`}
+                        className={`w-full rounded-xl border bg-white py-3.5 pl-10 pr-4 text-base shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean sm:text-sm ${errors.name ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
                       />
                     </div>
-                    {errors.name && (
-                      <p className="mt-1.5 text-xs text-red-500">{errors.name.message}</p>
-                    )}
-                  </div>
+                  </Field>
 
                   {/* Email + Phone */}
                   <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">
-                    <div>
-                      <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                        Email Address <span className="text-red-500">*</span>
-                      </label>
+                    <Field label="Email Address" required error={errors.email?.message}>
                       <div className="relative">
                         <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                         <input
                           type="email"
+                          inputMode="email"
+                          autoComplete="email"
+                          enterKeyHint="next"
                           placeholder="you@example.com"
                           {...register('email')}
-                          className={`w-full rounded-xl border bg-white py-3.5 pl-10 pr-4 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.email ? 'border-red-400 bg-red-50/30' : 'border-gray-300 shadow-sm'}`}
+                          className={`w-full rounded-xl border bg-white py-3.5 pl-10 pr-4 text-base shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean sm:text-sm ${errors.email ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
                         />
                       </div>
-                      {errors.email && (
-                        <p className="mt-1.5 text-xs text-red-500">{errors.email.message}</p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                        Phone Number <span className="text-red-500">*</span>
-                      </label>
+                    </Field>
+                    <Field label="Phone Number" required error={errors.phone?.message}>
                       <div className="relative">
                         <Phone className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                         <input
                           type="tel"
+                          inputMode="tel"
+                          autoComplete="tel"
+                          enterKeyHint="next"
                           placeholder="+91 98765 43210"
                           {...register('phone')}
-                          className={`w-full rounded-xl border bg-white py-3.5 pl-10 pr-4 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.phone ? 'border-red-400 bg-red-50/30' : 'border-gray-300 shadow-sm'}`}
+                          className={`w-full rounded-xl border bg-white py-3.5 pl-10 pr-4 text-base shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean sm:text-sm ${errors.phone ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
                         />
                       </div>
-                      {errors.phone && (
-                        <p className="mt-1.5 text-xs text-red-500">{errors.phone.message}</p>
-                      )}
-                    </div>
+                    </Field>
                   </div>
 
                   {/* Gender + DOB side by side, Location below */}
-                  <div className="grid grid-cols-2 gap-4 sm:gap-5">
-                    <div>
-                      <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                        Gender <span className="text-red-500">*</span>
-                      </label>
+                  <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">
+                    <Field label="Gender" required error={errors.gender?.message}>
                       <Controller
                         control={control}
                         name="gender"
@@ -632,12 +794,8 @@ export default function ApplyPage() {
                           />
                         )}
                       />
-                      {errors.gender && <p className="mt-1.5 text-xs text-red-500">{errors.gender.message}</p>}
-                    </div>
-                    <div>
-                      <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                        Date of Birth <span className="text-red-500">*</span>
-                      </label>
+                    </Field>
+                    <Field label="Date of Birth" required error={errors.dateOfBirth?.message}>
                       <Controller
                         control={control}
                         name="dateOfBirth"
@@ -653,24 +811,20 @@ export default function ApplyPage() {
                           />
                         )}
                       />
-                      {errors.dateOfBirth && <p className="mt-1.5 text-xs text-red-500">{errors.dateOfBirth.message}</p>}
-                    </div>
+                    </Field>
                   </div>
-                  <div>
-                    <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                      Location <span className="text-red-500">*</span>
-                    </label>
+                  <Field label="Location" required error={errors.location?.message}>
                     <div className="relative">
                       <MapPin className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                       <input
                         type="text"
+                        enterKeyHint="next"
                         placeholder="e.g. Visakhapatnam"
                         {...register('location')}
-                        className={`h-[50px] w-full rounded-xl border bg-white pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.location ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
+                        className={inputCls(!!errors.location)}
                       />
                     </div>
-                    {errors.location && <p className="mt-1.5 text-xs text-red-500">{errors.location.message}</p>}
-                  </div>
+                  </Field>
                 </div>
               </div>
 
@@ -725,44 +879,37 @@ export default function ApplyPage() {
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
                       transition={{ duration: 0.3 }}
-                      className="mt-5 space-y-5 rounded-xl border border-ocean/30 bg-gradient-to-br from-ocean/[0.05] to-cyan/[0.03] p-5 shadow-sm"
+                      className="mt-5 space-y-5 overflow-hidden rounded-xl border border-ocean/30 bg-gradient-to-br from-ocean/[0.05] to-cyan/[0.03] p-5 shadow-sm"
                     >
                       <div className="flex items-center gap-2 text-sm font-semibold text-ocean">
                         <Clock className="h-4 w-4" />
                         Employment Details
                       </div>
                       <div className="grid gap-5 sm:grid-cols-2">
-                        <div>
-                          <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                            Years of Experience
-                          </label>
+                        <Field label="Years of Experience" error={undefined}>
                           <input
                             type="number"
+                            inputMode="numeric"
                             min="0"
                             max="50"
+                            enterKeyHint="next"
                             placeholder="e.g. 3"
                             {...register('yearsOfExperience')}
-                            className="w-full rounded-xl border border-gray-300 bg-white py-3 px-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean"
+                            className="w-full rounded-xl border border-gray-300 bg-white py-3.5 px-4 text-base shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean sm:text-sm"
                           />
-                        </div>
-                        <div>
-                          <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                            Last Employer / Organization
-                          </label>
+                        </Field>
+                        <Field label="Last Employer / Organization" error={undefined}>
                           <input
                             type="text"
+                            enterKeyHint="next"
                             placeholder="Company name"
                             {...register('lastEmployer')}
-                            className="w-full rounded-xl border border-gray-300 bg-white py-3 px-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean"
+                            className="w-full rounded-xl border border-gray-300 bg-white py-3.5 px-4 text-base shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean sm:text-sm"
                           />
-                        </div>
+                        </Field>
                       </div>
                       <div className="grid gap-5 sm:grid-cols-2">
-                        <div>
-                          <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                            <Calendar className="mr-1 inline h-3.5 w-3.5 text-gray-400" />
-                            Employment From
-                          </label>
+                        <Field label="Employment From" error={undefined}>
                           <Controller
                             control={control}
                             name="lastEmploymentFrom"
@@ -770,12 +917,8 @@ export default function ApplyPage() {
                               <DatePicker value={field.value} onChange={field.onChange} placeholder="Start date" disableFuture />
                             )}
                           />
-                        </div>
-                        <div>
-                          <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                            <Calendar className="mr-1 inline h-3.5 w-3.5 text-gray-400" />
-                            Employment To
-                          </label>
+                        </Field>
+                        <Field label="Employment To" error={undefined}>
                           <Controller
                             control={control}
                             name="lastEmploymentTo"
@@ -783,40 +926,40 @@ export default function ApplyPage() {
                               <DatePicker value={field.value} onChange={field.onChange} placeholder="End date" disableFuture />
                             )}
                           />
-                        </div>
+                        </Field>
                       </div>
                     </motion.div>
                   )}
 
                   <div className="mt-5 grid gap-5 sm:grid-cols-2">
-                    <div>
-                      <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                        Available to Join <span className="text-red-500">*</span>
-                        <span className="ml-1 text-xs font-normal text-gray-400">(days)</span>
-                      </label>
+                    <Field
+                      label="Available to Join"
+                      required
+                      hint="(days)"
+                      error={errors.availableToJoin?.message}
+                     
+                    >
                       <input
                         type="text"
+                        inputMode="numeric"
+                        enterKeyHint="next"
                         placeholder="e.g. 15, 30, Immediately"
                         {...register('availableToJoin')}
-                        className={`w-full rounded-xl border bg-white py-3 px-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.availableToJoin ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
+                        className={inputCls(!!errors.availableToJoin)}
                       />
-                      {errors.availableToJoin && <p className="mt-1.5 text-xs text-red-500">{errors.availableToJoin.message}</p>}
-                    </div>
-                    <div>
-                      <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                        Current Location <span className="text-red-500">*</span>
-                      </label>
+                    </Field>
+                    <Field label="Current Location" required error={errors.currentLocation?.message}>
                       <div className="relative">
                         <MapPin className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                         <input
                           type="text"
+                          enterKeyHint="next"
                           placeholder="e.g. Hyderabad"
                           {...register('currentLocation')}
-                          className={`w-full rounded-xl border bg-white py-3 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.currentLocation ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
+                          className={`w-full rounded-xl border bg-white py-3.5 pl-10 pr-4 text-base shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean sm:text-sm ${errors.currentLocation ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
                         />
                       </div>
-                      {errors.currentLocation && <p className="mt-1.5 text-xs text-red-500">{errors.currentLocation.message}</p>}
-                    </div>
+                    </Field>
                   </div>
                 </div>
               </div>
@@ -856,8 +999,8 @@ export default function ApplyPage() {
                     <div className="mt-4 flex items-center gap-2">
                       <div className="relative flex-1">
                         <Linkedin className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-600" />
-                        <input type="url" placeholder="https://linkedin.com/in/your-profile" {...register('linkedinUrl')}
-                          className={`w-full rounded-xl border bg-white py-3 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.linkedinUrl ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`} />
+                        <input type="url" inputMode="url" enterKeyHint="done" placeholder="https://linkedin.com/in/your-profile" {...register('linkedinUrl')}
+                          className={`w-full rounded-xl border bg-white py-3.5 pl-10 pr-4 text-base shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean sm:text-sm ${errors.linkedinUrl ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`} />
                       </div>
                       <button type="button" onClick={() => { setShowLinkedin(false); setValue('linkedinUrl', ''); }}
                         className="rounded-lg p-2 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-colors">
@@ -873,8 +1016,9 @@ export default function ApplyPage() {
                     <div className="mt-4 flex items-center gap-2">
                       <div className="relative flex-1">
                         <Github className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-800" />
-                        <input type="url" placeholder="https://github.com/your-username" {...register('githubUrl')}
-                          className={`w-full rounded-xl border bg-white py-3 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.githubUrl ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`} />
+                        <input type="url" inputMode="url" enterKeyHint="done" placeholder="https://github.com/your-username" {...register('githubUrl')}
+                          className={`w-full rounded-xl border bg-white py-3.5 pl-10 pr-4 text-base shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean sm:text-sm ${errors.githubUrl ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
+                        />
                       </div>
                       <button type="button" onClick={() => { setShowGithub(false); setValue('githubUrl', ''); }}
                         className="rounded-lg p-2 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-colors">
@@ -890,8 +1034,9 @@ export default function ApplyPage() {
                     <div className="mt-4 flex items-center gap-2">
                       <div className="relative flex-1">
                         <ExternalLink className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-purple-600" />
-                        <input type="url" placeholder="https://your-portfolio.com" {...register('portfolioUrl')}
-                          className={`w-full rounded-xl border bg-white py-3 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.portfolioUrl ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`} />
+                        <input type="url" inputMode="url" enterKeyHint="done" placeholder="https://your-portfolio.com" {...register('portfolioUrl')}
+                          className={`w-full rounded-xl border bg-white py-3.5 pl-10 pr-4 text-base shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean sm:text-sm ${errors.portfolioUrl ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
+                        />
                       </div>
                       <button type="button" onClick={() => { setShowPortfolio(false); setValue('portfolioUrl', ''); }}
                         className="rounded-lg p-2 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-colors">
@@ -916,10 +1061,7 @@ export default function ApplyPage() {
                   </h3>
                   <div className="mt-4 space-y-5 rounded-2xl border border-gray-200/80 bg-gradient-to-br from-emerald-50/30 to-gray-100/30 p-5 sm:p-6 shadow-inner">
                     <div className="grid gap-5 sm:grid-cols-2">
-                      <div>
-                        <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                          Highest Degree <span className="text-red-500">*</span>
-                        </label>
+                      <Field label="Highest Degree" required error={errors.highestDegree?.message}>
                         <Controller
                           control={control}
                           name="highestDegree"
@@ -934,49 +1076,40 @@ export default function ApplyPage() {
                             />
                           )}
                         />
-                        {errors.highestDegree && <p className="mt-1.5 text-xs text-red-500">{errors.highestDegree.message}</p>}
-                      </div>
-                      <div>
-                        <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                          College / University Name <span className="text-red-500">*</span>
-                        </label>
+                      </Field>
+                      <Field label="College / University Name" required error={errors.collegeName?.message}>
                         <input
                           type="text"
+                          enterKeyHint="next"
                           placeholder="e.g. GITAM University"
                           {...register('collegeName')}
-                          className={`w-full rounded-xl border bg-white py-3.5 px-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.collegeName ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
+                          className={`w-full rounded-xl border bg-white py-3.5 px-4 text-base shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean sm:text-sm ${errors.collegeName ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
                         />
-                        {errors.collegeName && <p className="mt-1.5 text-xs text-red-500">{errors.collegeName.message}</p>}
-                      </div>
+                      </Field>
                     </div>
                     <div className="grid gap-5 sm:grid-cols-2">
-                      <div>
-                        <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                          College City <span className="text-red-500">*</span>
-                        </label>
+                      <Field label="College City" required error={errors.collegeCity?.message}>
                         <div className="relative">
                           <MapPin className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                           <input
                             type="text"
+                            enterKeyHint="next"
                             placeholder="e.g. Visakhapatnam"
                             {...register('collegeCity')}
-                            className={`w-full rounded-xl border bg-white py-3.5 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.collegeCity ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
+                            className={`w-full rounded-xl border bg-white py-3.5 pl-10 pr-4 text-base shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean sm:text-sm ${errors.collegeCity ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
                           />
                         </div>
-                        {errors.collegeCity && <p className="mt-1.5 text-xs text-red-500">{errors.collegeCity.message}</p>}
-                      </div>
-                      <div>
-                        <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                          Study Years <span className="text-red-500">*</span>
-                        </label>
+                      </Field>
+                      <Field label="Study Years" required error={errors.studyYears?.message}>
                         <input
                           type="text"
+                          inputMode="numeric"
+                          enterKeyHint="next"
                           placeholder="e.g. 2020 - 2024"
                           {...register('studyYears')}
-                          className={`w-full rounded-xl border bg-white py-3.5 px-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.studyYears ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
+                          className={`w-full rounded-xl border bg-white py-3.5 px-4 text-base shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean sm:text-sm ${errors.studyYears ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
                         />
-                        {errors.studyYears && <p className="mt-1.5 text-xs text-red-500">{errors.studyYears.message}</p>}
-                      </div>
+                      </Field>
                     </div>
                   </div>
                 </div>
@@ -991,18 +1124,14 @@ export default function ApplyPage() {
                   Your Motivation
                 </h3>
                 <div className="mt-4 rounded-2xl border border-gray-200/80 bg-gradient-to-br from-rose/[0.03] to-gray-100/30 p-4 sm:p-6 shadow-inner">
-                  <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                    Why should we hire you? <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    placeholder="Tell us why you'd be a great fit for this role, what unique skills you bring, and what motivates you to join HKM Vizag..."
-                    rows={5}
-                    {...register('coverLetter')}
-                    className={`w-full rounded-xl border bg-white px-4 py-3.5 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean resize-none ${errors.coverLetter ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
-                  />
-                  {errors.coverLetter && (
-                    <p className="mt-1.5 text-xs text-red-500">{errors.coverLetter.message}</p>
-                  )}
+                  <Field label="Why should we hire you?" required error={errors.coverLetter?.message}>
+                    <textarea
+                      placeholder="Tell us why you'd be a great fit for this role, what unique skills you bring, and what motivates you to join HKM Vizag..."
+                      rows={5}
+                      {...register('coverLetter')}
+                      className={`w-full rounded-xl border bg-white px-4 py-3.5 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean resize-none ${errors.coverLetter ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
+                    />
+                  </Field>
                 </div>
               </div>
 
@@ -1079,8 +1208,33 @@ export default function ApplyPage() {
                 </div>
               </div>
 
+              {/* Review summary — collapsible on the final step */}
+              {step === totalSteps && (
+                <div className="rounded-2xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white p-5 sm:p-6">
+                  <details>
+                    <summary className="flex cursor-pointer select-none items-center gap-2 text-sm font-bold text-navy">
+                      <Eye className="h-4 w-4 text-ocean" />
+                      Review your details
+                      <span className="ml-auto text-xs font-normal text-gray-400">tap to expand</span>
+                    </summary>
+                    <dl className="mt-4 grid gap-x-6 gap-y-2.5 sm:grid-cols-2">
+                      {reviewRows.map((row) => (
+                        <div key={row.label} className="flex items-baseline justify-between gap-3 border-b border-gray-100 pb-2">
+                          <dt className="text-xs font-semibold uppercase tracking-wide text-gray-400">{row.label}</dt>
+                          <dd className="truncate text-sm font-medium text-gray-700">{row.value}</dd>
+                        </div>
+                      ))}
+                      <div className="flex items-baseline justify-between gap-3 border-b border-gray-100 pb-2">
+                        <dt className="text-xs font-semibold uppercase tracking-wide text-gray-400">Resume</dt>
+                        <dd className="truncate text-sm font-medium text-gray-700">{file ? file.name : '—'}</dd>
+                      </div>
+                    </dl>
+                  </details>
+                </div>
+              )}
+
               {/* Step navigation */}
-              <div className="rounded-2xl border border-ocean/15 bg-gradient-to-br from-navy/[0.03] via-plum/[0.02] to-ocean/[0.03] p-5 sm:p-6">
+              <div ref={navRef} className="rounded-2xl border border-ocean/15 bg-gradient-to-br from-navy/[0.03] via-plum/[0.02] to-ocean/[0.03] p-5 sm:p-6">
                 {step === totalSteps && (
                   <div className="mb-4 flex items-start gap-2">
                     <Shield className="mt-0.5 h-4 w-4 flex-shrink-0 text-ocean" />

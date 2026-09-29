@@ -21,6 +21,8 @@ import {
   Linkedin,
   Github,
   ExternalLink,
+  Copy,
+  Check,
 } from 'lucide-react';
 import {
   getAdminApplication,
@@ -55,6 +57,18 @@ export default function ApplicationDetailPage() {
   const [addingNote, setAddingNote] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [statusConfirm, setStatusConfirm] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState(false);
+
+  const handleCopyId = async () => {
+    if (!app) return;
+    try {
+      await navigator.clipboard.writeText(app._id);
+      setCopiedId(true);
+      setTimeout(() => setCopiedId(false), 2000);
+    } catch {
+      /* Clipboard unavailable — ID remains selectable. */
+    }
+  };
 
   const load = async () => {
     try { const data = await getAdminApplication(id); setApp(data); } catch { /* */ } finally { setLoading(false); }
@@ -115,10 +129,19 @@ export default function ApplicationDetailPage() {
             <div>
               <h1 className="text-xl font-bold text-gray-900">{app.name}</h1>
               <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-gray-500">
-                <span className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" />{app.email}</span>
-                {app.phone && <span className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" />{app.phone}</span>}
+                <a href={`mailto:${app.email}`} className="flex items-center gap-1.5 transition-colors hover:text-ocean"><Mail className="h-3.5 w-3.5" />{app.email}</a>
+                {app.phone && <a href={`tel:${app.phone.replace(/\s/g, '')}`} className="flex items-center gap-1.5 transition-colors hover:text-ocean"><Phone className="h-3.5 w-3.5" />{app.phone}</a>}
                 <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" />Applied {formatDate(app.createdAt)}</span>
               </div>
+              <button
+                type="button"
+                onClick={handleCopyId}
+                title="Copy Application ID"
+                className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-gray-50 px-2.5 py-1 font-mono text-xs text-gray-500 transition-colors hover:bg-ocean/10 hover:text-ocean"
+              >
+                ID: {app._id}
+                {copiedId ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+              </button>
             </div>
           </div>
           <Badge variant={app.status as 'received'}>
