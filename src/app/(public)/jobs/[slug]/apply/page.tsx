@@ -445,34 +445,34 @@ export default function ApplyPage() {
   return (
     <div className="page-canvas min-h-screen">
       {/* Hero banner */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-navy via-[#2a1d6b] to-ocean py-6 sm:py-14">
+      <div className="relative overflow-hidden bg-gradient-to-br from-navy via-[#2a1d6b] to-ocean pb-6 pt-[96px] sm:pb-14 sm:pt-[120px]">
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-20 -right-20 h-[300px] w-[300px] rounded-full bg-cyan/10 animate-float" />
           <div className="absolute -bottom-16 -left-16 h-[200px] w-[200px] rounded-full bg-gold/10 animate-float-delayed" />
         </div>
-        <div className="relative mx-auto max-w-3xl px-4 sm:px-6">
+          <div className="relative mx-auto max-w-3xl px-4 sm:px-6">
           <Link
             href={`/jobs/${slug}`}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-white/60 hover:text-white transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-white/60 transition-colors hover:text-white"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Job
           </Link>
           <div className="mt-4 flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm">
               <Briefcase className="h-7 w-7 text-cyan" />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-white sm:text-3xl">{job?.title}</h1>
+            <div className="min-w-0">
+              <h1 className="break-words text-2xl font-bold text-white sm:text-3xl">{job?.title}</h1>
               <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-white/60">
                 {departmentName && (
                   <span className="flex items-center gap-1.5">
-                    <Building2 className="h-3.5 w-3.5" />
-                    {departmentName}
+                    <Building2 className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{departmentName}</span>
                   </span>
                 )}
                 <span className="flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5" />
+                  <MapPin className="h-3.5 w-3.5 shrink-0" />
                   {job?.location}
                 </span>
               </div>
@@ -482,7 +482,7 @@ export default function ApplyPage() {
       </div>
 
       {/* Form container */}
-      <div ref={formTopRef} className="mx-auto max-w-3xl px-4 sm:px-6 py-5 pb-12 sm:py-8 sm:pb-16 scroll-mt-4">
+      <div ref={formTopRef} className="mx-auto max-w-3xl px-4 py-5 pb-12 sm:px-6 sm:py-8 sm:pb-16 scroll-mt-24">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -612,23 +612,8 @@ export default function ApplyPage() {
                     </div>
                   </div>
 
-                  {/* Location + Gender + DOB */}
-                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5">
-                    <div>
-                      <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                        Location <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <MapPin className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                        <input
-                          type="text"
-                          placeholder="e.g. Visakhapatnam"
-                          {...register('location')}
-                          className={`h-[50px] w-full rounded-xl border bg-white pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.location ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
-                        />
-                      </div>
-                      {errors.location && <p className="mt-1.5 text-xs text-red-500">{errors.location.message}</p>}
-                    </div>
+                  {/* Gender + DOB side by side, Location below */}
+                  <div className="grid grid-cols-2 gap-4 sm:gap-5">
                     <div>
                       <label className="mb-1.5 block text-sm font-semibold text-gray-700">
                         Gender <span className="text-red-500">*</span>
@@ -649,7 +634,7 @@ export default function ApplyPage() {
                       />
                       {errors.gender && <p className="mt-1.5 text-xs text-red-500">{errors.gender.message}</p>}
                     </div>
-                    <div className="col-span-2 sm:col-span-1">
+                    <div>
                       <label className="mb-1.5 block text-sm font-semibold text-gray-700">
                         Date of Birth <span className="text-red-500">*</span>
                       </label>
@@ -660,7 +645,7 @@ export default function ApplyPage() {
                           <DatePicker
                             value={field.value}
                             onChange={field.onChange}
-                            placeholder="Select your date of birth"
+                            placeholder="Select date of birth"
                             error={!!errors.dateOfBirth}
                             disableFuture
                             minYear={1950}
@@ -670,6 +655,21 @@ export default function ApplyPage() {
                       />
                       {errors.dateOfBirth && <p className="mt-1.5 text-xs text-red-500">{errors.dateOfBirth.message}</p>}
                     </div>
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+                      Location <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="e.g. Visakhapatnam"
+                        {...register('location')}
+                        className={`h-[50px] w-full rounded-xl border bg-white pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${errors.location ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
+                      />
+                    </div>
+                    {errors.location && <p className="mt-1.5 text-xs text-red-500">{errors.location.message}</p>}
                   </div>
                 </div>
               </div>

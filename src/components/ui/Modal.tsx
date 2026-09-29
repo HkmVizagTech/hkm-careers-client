@@ -53,7 +53,7 @@ function Modal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Overlay */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -72,7 +72,7 @@ function Modal({
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
             className={cn(
-              'relative z-10 w-full rounded-2xl bg-white p-6 shadow-xl mx-4',
+              'relative z-10 max-h-[85dvh] w-full overflow-y-auto rounded-2xl bg-white p-6 shadow-xl',
               sizeStyles[size]
             )}
             role="dialog"

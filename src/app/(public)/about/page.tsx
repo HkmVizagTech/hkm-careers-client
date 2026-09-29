@@ -42,10 +42,10 @@ const benefits = [
 
 export default function AboutPage() {
   return (
-    <div className="overflow-hidden">
+    <div>
       {/* Hero */}
-      <section className="relative bg-gradient-to-br from-navy via-[#2a1d6b] to-ocean py-20 sm:py-28">
-        <div className="absolute inset-0 overflow-hidden">
+      <section className="relative bg-gradient-to-br from-navy via-[#2a1d6b] to-ocean py-16 pt-[104px] sm:py-24 sm:pt-[120px]">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-cyan/10 animate-float" />
           <div className="absolute -bottom-32 -left-32 h-[400px] w-[400px] rounded-full bg-gold/10 animate-float-delayed" />
         </div>
@@ -67,11 +67,11 @@ export default function AboutPage() {
       {/* Stats */}
       <section className="page-canvas relative -mt-8">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
             {stats.map((stat) => (
-              <div key={stat.label} className="rounded-2xl border border-gray-200 bg-white p-6 text-center shadow-lg shadow-navy/5">
+              <div key={stat.label} className="rounded-2xl border border-gray-200 bg-white p-4 text-center shadow-lg shadow-navy/5 sm:p-6">
                 <p className="text-2xl font-bold text-gradient sm:text-3xl">{stat.value}</p>
-                <p className="mt-1 text-sm text-gray-500">{stat.label}</p>
+                <p className="mt-1 text-xs text-gray-500 sm:text-sm">{stat.label}</p>
               </div>
             ))}
           </div>
@@ -101,7 +101,7 @@ export default function AboutPage() {
                 <Globe className="h-4 w-4" /> Visit our main website <ArrowRight className="h-4 w-4" />
               </a>
             </div>
-            <div className="grid grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 gap-5 min-[420px]:grid-cols-2">
               {values.map((v) => (
                 <div key={v.title} className="rounded-2xl border border-white/70 bg-white p-5 shadow-lift ring-1 ring-navy/[0.04] transition-all hover:shadow-glow hover:-translate-y-1">
                   <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${v.color} text-white shadow-md`}>

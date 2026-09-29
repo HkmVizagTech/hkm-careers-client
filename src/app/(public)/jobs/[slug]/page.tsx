@@ -21,6 +21,8 @@ import {
   Calendar,
   Copy,
   ExternalLink,
+  X,
+  ArrowRight,
 } from 'lucide-react';
 import { getPublicJobBySlug } from '@/lib/services';
 import { Badge } from '@/components/ui/Badge';
@@ -73,6 +75,7 @@ export default function JobDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -88,10 +91,25 @@ export default function JobDetailPage() {
     load();
   }, [slug]);
 
+  // Lock body scroll while the confirm dialog is open.
+  useEffect(() => {
+    if (!confirmOpen) return;
+    const original = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, [confirmOpen]);
+
   const handleCopyLink = () => {
     navigator.clipboard?.writeText(window.location.href);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const startApplication = () => {
+    setConfirmOpen(false);
+    router.push(`/jobs/${slug}/apply`);
   };
 
   if (loading) {
@@ -129,11 +147,11 @@ export default function JobDetailPage() {
       : '';
 
   return (
-    <div className="page-canvas min-h-screen">
+    <div className="page-canvas min-h-screen pb-24 sm:pb-0">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-navy via-[#2a1d6b] to-ocean py-12 sm:py-16">
+      <section className="relative overflow-hidden bg-gradient-to-br from-navy via-[#2a1d6b] to-ocean pb-10 pt-[104px] sm:pb-14 sm:pt-[120px]">
         {/* Decorative floating circles */}
-        <div className="absolute inset-0 overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -top-24 -right-24 h-[350px] w-[350px] rounded-full bg-cyan/10 animate-float" />
           <div className="absolute -bottom-20 -left-20 h-[250px] w-[250px] rounded-full bg-gold/10 animate-float-delayed" />
           <div className="absolute top-1/2 left-1/3 h-[120px] w-[120px] rounded-full bg-white/5 animate-float-slow" />
@@ -142,19 +160,19 @@ export default function JobDetailPage() {
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <Link
             href="/jobs"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-white/60 hover:text-white transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-white/60 transition-colors hover:text-white"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Jobs
           </Link>
 
-          <div className="mt-6 flex items-start gap-5">
-            <div className="hidden sm:flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10">
+          <div className="mt-6 flex flex-col gap-5 sm:flex-row sm:items-start">
+            <div className="hidden h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm sm:flex">
               <Briefcase className="h-8 w-8 text-cyan" />
             </div>
-            <div className="flex-1">
+            <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-3">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-cyan backdrop-blur-sm border border-white/10">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-cyan backdrop-blur-sm">
                   {typeLabels[job.type]}
                 </span>
                 <span className="flex items-center gap-1.5 text-xs text-white/50">
@@ -162,45 +180,63 @@ export default function JobDetailPage() {
                   Posted {formatDate(job.createdAt)}
                 </span>
               </div>
-              <h1 className="mt-3 text-2xl font-bold text-white sm:text-3xl lg:text-4xl">
+              <h1 className="mt-3 break-words text-2xl font-bold text-white sm:text-3xl lg:text-4xl">
                 {job.title}
               </h1>
-              <div className="mt-4 flex flex-wrap items-center gap-2 sm:gap-3 overflow-hidden">
+              <div className="mt-4 flex flex-wrap items-center gap-2 sm:gap-3">
                 {departmentName && (
-                  <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-sm text-white/80 backdrop-blur-sm border border-white/10">
-                    <Building2 className="h-3.5 w-3.5 text-cyan" />
-                    {departmentName}
+                  <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-1.5 text-sm text-white/80 backdrop-blur-sm">
+                    <Building2 className="h-3.5 w-3.5 shrink-0 text-cyan" />
+                    <span className="max-w-[50vw] truncate sm:max-w-none">{departmentName}</span>
                   </span>
                 )}
-                <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-sm text-white/80 backdrop-blur-sm border border-white/10">
-                  <MapPin className="h-3.5 w-3.5 text-cyan" />
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-1.5 text-sm text-white/80 backdrop-blur-sm">
+                  <MapPin className="h-3.5 w-3.5 shrink-0 text-cyan" />
                   {job.location}
                 </span>
                 {job.experience && (
-                  <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-sm text-white/80 backdrop-blur-sm border border-white/10">
-                    <Clock className="h-3.5 w-3.5 text-cyan" />
+                  <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-1.5 text-sm text-white/80 backdrop-blur-sm">
+                    <Clock className="h-3.5 w-3.5 shrink-0 text-cyan" />
                     {job.experience}
                   </span>
                 )}
                 {job.salaryRange && (
-                  <span className="inline-flex items-center gap-2 rounded-full bg-emerald-400/15 px-4 py-1.5 text-sm font-medium text-emerald-300 backdrop-blur-sm border border-emerald-400/20">
-                    <IndianRupee className="h-3.5 w-3.5" />
+                  <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/15 px-4 py-1.5 text-sm font-medium text-emerald-300 backdrop-blur-sm">
+                    <IndianRupee className="h-3.5 w-3.5 shrink-0" />
                     {job.salaryRange.startsWith('₹') ? job.salaryRange : `₹${job.salaryRange}`}
                   </span>
                 )}
                 {job.targetGender && job.targetGender !== 'any' && (
-                  <span className="inline-flex items-center gap-2 rounded-full bg-purple-400/15 px-4 py-1.5 text-sm font-medium text-purple-200 backdrop-blur-sm border border-purple-400/20">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-purple-400/20 bg-purple-400/15 px-4 py-1.5 text-sm font-medium text-purple-200 backdrop-blur-sm">
                     {job.targetGender === 'female' ? '♀ Female Only' : '♂ Male Only'}
                   </span>
                 )}
               </div>
             </div>
           </div>
+
+          {/* Top Apply CTA */}
+          <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <button
+              onClick={() => setConfirmOpen(true)}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-gold to-goldDeep px-8 py-3.5 text-sm font-bold text-navy shadow-lg shadow-gold/25 transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-gold/35 active:scale-[0.98]"
+            >
+              <CheckCircle className="h-4 w-4" />
+              Apply Now
+            </button>
+            <button
+              onClick={handleCopyLink}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/20 px-6 py-3.5 text-sm font-semibold text-white/80 transition-all hover:bg-white/10 hover:text-white"
+            >
+              <Share2 className="h-4 w-4" />
+              Share Job
+            </button>
+          </div>
         </div>
       </section>
 
       {/* Main Content */}
-      <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 pb-8">
+      <div className="relative mx-auto max-w-6xl px-4 py-8 pb-8 sm:px-6 lg:px-8">
         <motion.div
           variants={staggerContainer}
           initial="hidden"
@@ -208,19 +244,19 @@ export default function JobDetailPage() {
           className="grid gap-6 lg:grid-cols-3"
         >
           {/* Left Column - Content Cards */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="min-w-0 space-y-6 lg:col-span-2">
             {/* About This Role */}
             <motion.div
               variants={fadeUp}
               className="overflow-hidden rounded-2xl border border-gray-200/80 bg-gradient-to-br from-white to-gray-50/30 shadow-xl shadow-navy/5"
             >
-              <div className="flex items-center gap-3 border-b border-gray-100 px-6 py-5 sm:px-8">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-navy to-ocean text-white shadow-md shadow-navy/20">
+              <div className="flex items-center gap-3 border-b border-gray-100 px-5 py-5 sm:px-8">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-navy to-ocean text-white shadow-md shadow-navy/20">
                   <FileText className="h-5 w-5" />
                 </div>
                 <h2 className="text-lg font-bold text-navy">About This Role</h2>
               </div>
-              <div className="p-6 sm:p-8">
+              <div className="p-5 sm:p-8">
                 {renderPoints(job.description)}
               </div>
             </motion.div>
@@ -231,13 +267,13 @@ export default function JobDetailPage() {
                 variants={fadeUp}
                 className="overflow-hidden rounded-2xl border border-gray-200/80 bg-gradient-to-br from-white to-ocean/[0.02] shadow-xl shadow-navy/5"
               >
-                <div className="flex items-center gap-3 border-b border-gray-100 px-6 py-5 sm:px-8">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-ocean to-cyan text-white shadow-md shadow-ocean/20">
+                <div className="flex items-center gap-3 border-b border-gray-100 px-5 py-5 sm:px-8">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-ocean to-cyan text-white shadow-md shadow-ocean/20">
                     <ListChecks className="h-5 w-5" />
                   </div>
                   <h2 className="text-lg font-bold text-navy">Responsibilities</h2>
                 </div>
-                <div className="p-6 sm:p-8">
+                <div className="p-5 sm:p-8">
                   {renderPoints(job.responsibilities)}
                 </div>
               </motion.div>
@@ -249,13 +285,13 @@ export default function JobDetailPage() {
                 variants={fadeUp}
                 className="overflow-hidden rounded-2xl border border-gray-200/80 bg-gradient-to-br from-white to-gold/[0.03] shadow-xl shadow-navy/5"
               >
-                <div className="flex items-center gap-3 border-b border-gray-100 px-6 py-5 sm:px-8">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-gold to-amber-500 text-white shadow-md shadow-gold/20">
+                <div className="flex items-center gap-3 border-b border-gray-100 px-5 py-5 sm:px-8">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-gold to-amber-500 text-white shadow-md shadow-gold/20">
                     <GraduationCap className="h-5 w-5" />
                   </div>
                   <h2 className="text-lg font-bold text-navy">Qualifications</h2>
                 </div>
-                <div className="p-6 sm:p-8">
+                <div className="p-5 sm:p-8">
                   {renderPoints(job.qualifications)}
                 </div>
               </motion.div>
@@ -263,8 +299,8 @@ export default function JobDetailPage() {
           </div>
 
           {/* Sidebar */}
-          <motion.div variants={fadeUp} className="space-y-6">
-            <div className="sticky top-24 space-y-6">
+          <motion.div variants={fadeUp} className="min-w-0 space-y-6">
+            <div className="space-y-6 lg:sticky lg:top-24">
               {/* Apply Card */}
               <div className="overflow-hidden rounded-2xl border border-gray-200/80 bg-gradient-to-br from-white via-white to-ocean/[0.04] shadow-xl shadow-navy/5">
                 <div className="h-1.5 bg-gradient-to-r from-navy via-ocean to-cyan" />
@@ -273,21 +309,22 @@ export default function JobDetailPage() {
                   <p className="mt-2 text-sm text-gray-500">
                     Applications are reviewed on a rolling basis. Don&apos;t miss this opportunity.
                   </p>
-                  <Link href={`/jobs/${job.slug}/apply`} className="mt-5 block">
-                    <button className="w-full rounded-2xl bg-gradient-to-r from-navy to-ocean px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-navy/20 transition-all hover:shadow-xl hover:shadow-navy/25 hover:scale-[1.02] active:scale-[0.98]">
-                      <CheckCircle className="mr-2 inline h-4 w-4" />
-                      Apply Now
-                    </button>
-                  </Link>
+                  <button
+                    onClick={() => setConfirmOpen(true)}
+                    className="mt-5 w-full rounded-2xl bg-gradient-to-r from-navy to-ocean px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-navy/20 transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-navy/25 active:scale-[0.98]"
+                  >
+                    <CheckCircle className="mr-2 inline h-4 w-4" />
+                    Apply Now
+                  </button>
 
                   <div className="mt-4 flex gap-2">
-                    <button className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100">
+                    <button className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100">
                       <Bookmark className="h-4 w-4" />
                       Save
                     </button>
                     <button
                       onClick={handleCopyLink}
-                      className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100"
+                      className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100"
                     >
                       <Share2 className="h-4 w-4" />
                       Share
@@ -298,66 +335,66 @@ export default function JobDetailPage() {
 
               {/* Job Details Card */}
               <div className="overflow-hidden rounded-2xl border border-gray-200/80 bg-gradient-to-br from-white via-white to-navy/[0.03] shadow-xl shadow-navy/5">
-                <div className="px-6 py-4 border-b border-gray-100">
-                  <h3 className="text-sm font-bold text-navy uppercase tracking-wider">
+                <div className="border-b border-gray-100 px-6 py-4">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-navy">
                     Job Details
                   </h3>
                 </div>
-                <div className="p-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-sm text-gray-500">
+                <div className="space-y-4 p-6">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="flex shrink-0 items-center gap-2 text-sm text-gray-500">
                       <Briefcase className="h-4 w-4 text-gray-400" />
                       Job Type
                     </span>
                     <Badge variant={job.type}>{typeLabels[job.type]}</Badge>
                   </div>
                   <div className="border-t border-gray-100" />
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-sm text-gray-500">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="flex shrink-0 items-center gap-2 text-sm text-gray-500">
                       <MapPin className="h-4 w-4 text-gray-400" />
                       Location
                     </span>
-                    <span className="text-sm font-medium text-navy">{job.location}</span>
+                    <span className="min-w-0 truncate text-right text-sm font-medium text-navy">{job.location}</span>
                   </div>
                   {departmentName && (
                     <>
                       <div className="border-t border-gray-100" />
-                      <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-2 text-sm text-gray-500">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="flex shrink-0 items-center gap-2 text-sm text-gray-500">
                           <Building2 className="h-4 w-4 text-gray-400" />
                           Department
                         </span>
-                        <span className="text-sm font-medium text-navy">{departmentName}</span>
+                        <span className="min-w-0 text-right text-sm font-medium text-navy">{departmentName}</span>
                       </div>
                     </>
                   )}
                   {job.experience && (
                     <>
                       <div className="border-t border-gray-100" />
-                      <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-2 text-sm text-gray-500">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="flex shrink-0 items-center gap-2 text-sm text-gray-500">
                           <Clock className="h-4 w-4 text-gray-400" />
                           Experience
                         </span>
-                        <span className="text-sm font-medium text-navy">{job.experience}</span>
+                        <span className="min-w-0 text-right text-sm font-medium text-navy">{job.experience}</span>
                       </div>
                     </>
                   )}
                   {job.salaryRange && (
                     <>
                       <div className="border-t border-gray-100" />
-                      <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-2 text-sm text-gray-500">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="flex shrink-0 items-center gap-2 text-sm text-gray-500">
                           <IndianRupee className="h-4 w-4 text-gray-400" />
                           Salary
                         </span>
-                        <span className="text-sm font-bold text-green-600">{job.salaryRange.startsWith('₹') ? job.salaryRange : `₹${job.salaryRange}`}</span>
+                        <span className="text-right text-sm font-bold text-green-600">{job.salaryRange.startsWith('₹') ? job.salaryRange : `₹${job.salaryRange}`}</span>
                       </div>
                     </>
                   )}
                   <div className="border-t border-gray-100" />
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-sm text-gray-500">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="flex shrink-0 items-center gap-2 text-sm text-gray-500">
                       <Calendar className="h-4 w-4 text-gray-400" />
                       Posted
                     </span>
@@ -368,8 +405,8 @@ export default function JobDetailPage() {
 
               {/* Share This Job Card */}
               <div className="overflow-hidden rounded-2xl border border-gray-200/80 bg-gradient-to-br from-white via-white to-cyan/[0.04] shadow-xl shadow-navy/5">
-                <div className="px-6 py-4 border-b border-gray-100">
-                  <h3 className="text-sm font-bold text-navy uppercase tracking-wider">
+                <div className="border-b border-gray-100 px-6 py-4">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-navy">
                     Share This Job
                   </h3>
                 </div>
@@ -378,12 +415,12 @@ export default function JobDetailPage() {
                     Know someone who would be great for this role? Spread the word!
                   </p>
                   <div className="mt-4 flex items-center gap-2 rounded-xl bg-background p-2">
-                    <div className="flex-1 truncate rounded-lg bg-white px-3 py-2 text-xs text-gray-500 border border-gray-200">
+                    <div className="min-w-0 flex-1 truncate rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-500">
                       {typeof window !== 'undefined' ? window.location.href : `/jobs/${job.slug}`}
                     </div>
                     <button
                       onClick={handleCopyLink}
-                      className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-navy to-ocean px-3 py-2 text-xs font-semibold text-white transition-all hover:shadow-md hover:shadow-navy/20 active:scale-[0.97]"
+                      className="flex shrink-0 items-center gap-1.5 rounded-lg bg-gradient-to-r from-navy to-ocean px-3 py-2 text-xs font-semibold text-white transition-all hover:shadow-md hover:shadow-navy/20 active:scale-[0.97]"
                     >
                       {copied ? (
                         <>
@@ -403,7 +440,7 @@ export default function JobDetailPage() {
                       href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-600 transition-all hover:bg-gray-50 hover:border-gray-300"
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-600 transition-all hover:border-gray-300 hover:bg-gray-50"
                     >
                       <ExternalLink className="h-3 w-3" />
                       LinkedIn
@@ -412,7 +449,7 @@ export default function JobDetailPage() {
                       href={`https://wa.me/?text=${encodeURIComponent(`Check out this job: ${job.title} - ${typeof window !== 'undefined' ? window.location.href : ''}`)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-600 transition-all hover:bg-gray-50 hover:border-gray-300"
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-600 transition-all hover:border-gray-300 hover:bg-gray-50"
                     >
                       <ExternalLink className="h-3 w-3" />
                       WhatsApp
@@ -425,6 +462,91 @@ export default function JobDetailPage() {
         </motion.div>
       </div>
 
+      {/* Mobile sticky apply bar */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 p-3 shadow-[0_-4px_24px_rgba(5,32,87,0.12)] backdrop-blur-xl sm:hidden">
+        <button
+          onClick={() => setConfirmOpen(true)}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-navy to-ocean px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-navy/25 active:scale-[0.98]"
+        >
+          <CheckCircle className="h-4 w-4" />
+          Apply Now — {job.title.length > 24 ? `${job.title.slice(0, 24)}…` : job.title}
+        </button>
+      </div>
+
+      {/* "Did you read the description?" confirm dialog */}
+      {confirmOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Confirm application">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2 }}
+            className="absolute inset-0 bg-navy/70 backdrop-blur-sm"
+            onClick={() => setConfirmOpen(false)}
+            aria-hidden="true"
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="relative z-10 max-h-[85dvh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white shadow-2xl"
+          >
+            <div className="h-2 bg-gradient-to-r from-navy via-ocean to-gold" />
+            <div className="p-6 sm:p-8">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-gold to-goldDeep shadow-lg shadow-gold/30">
+                  <FileText className="h-7 w-7 text-navy" />
+                </div>
+                <button
+                  onClick={() => setConfirmOpen(false)}
+                  className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                  aria-label="Close"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <h3 className="mt-5 text-xl font-bold text-navy sm:text-2xl">
+                Did you read the full job description?
+              </h3>
+              <p className="mt-3 text-sm leading-relaxed text-gray-500">
+                Before you begin, please make sure you&apos;ve gone through the role details,
+                responsibilities, and qualifications above. This helps you put together a strong
+                application — and helps our team respond faster.
+              </p>
+
+              <ul className="mt-5 space-y-2.5 rounded-2xl border border-ocean/15 bg-gradient-to-br from-ocean/[0.05] to-cyan/[0.03] p-4 text-sm text-gray-600">
+                <li className="flex items-center gap-2.5">
+                  <CheckCircle className="h-4 w-4 shrink-0 text-ocean" />
+                  Yes, I&apos;ve read the description
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <CheckCircle className="h-4 w-4 shrink-0 text-ocean" />
+                  I meet the key qualifications
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <CheckCircle className="h-4 w-4 shrink-0 text-ocean" />
+                  My resume is ready to upload
+                </li>
+              </ul>
+
+              <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row">
+                <button
+                  onClick={() => setConfirmOpen(false)}
+                  className="flex-1 rounded-2xl border border-gray-200 bg-gray-50 px-6 py-3.5 text-sm font-semibold text-gray-600 transition-all hover:bg-gray-100"
+                >
+                  Not yet — take me back
+                </button>
+                <button
+                  onClick={startApplication}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-navy to-ocean px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-navy/25 transition-all hover:scale-[1.02] hover:shadow-xl active:scale-[0.98]"
+                >
+                  Yes, Start Application
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

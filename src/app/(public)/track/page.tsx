@@ -83,10 +83,10 @@ export default function TrackPage() {
   const currentStepIndex = result ? getStepIndex(result.status) : -1;
 
   return (
-    <div className="overflow-hidden">
+    <div>
       {/* Hero */}
-      <section className="relative bg-gradient-to-br from-navy via-[#2a1d6b] to-ocean py-20 sm:py-28">
-        <div className="absolute inset-0 overflow-hidden">
+      <section className="relative bg-gradient-to-br from-navy via-[#2a1d6b] to-ocean py-16 pt-[104px] sm:py-24 sm:pt-[120px]">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-cyan/10 animate-float" />
           <div className="absolute -bottom-32 -left-32 h-[400px] w-[400px] rounded-full bg-gold/10 animate-float-delayed" />
         </div>
@@ -317,7 +317,7 @@ export default function TrackPage() {
                                 {isCompleted ? (
                                   <CheckCircle className="h-5 w-5" />
                                 ) : (
-                                  <StepIcon className="h-4.5 w-4.5" />
+                                  <StepIcon className="h-4 w-4" />
                                 )}
                               </div>
                               <p

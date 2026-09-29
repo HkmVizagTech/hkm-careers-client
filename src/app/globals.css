@@ -4,6 +4,28 @@
 
 html {
   scroll-behavior: smooth;
+  /* Fixed header offset for in-page anchor jumps. */
+  scroll-padding-top: 5.5rem;
+}
+
+html,
+body {
+  /* Kill any accidental horizontal overflow site-wide (fixed/absolute decor,
+     long words, wide rows) without breaking position: sticky inside. */
+  overflow-x: clip;
+}
+
+body {
+  min-width: 0;
+}
+
+/* Prevent iOS Safari zooming the page when focusing inputs (<16px). */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
 
 /* Custom scrollbar */
@@ -130,6 +152,12 @@ html {
   animation: countUp 0.6s ease-out forwards;
 }
 
+/* Wide-cell wrapper: lets grid/flex children shrink below their content width.
+   Without this, long job titles / fixed-width rows force the page wider on phones. */
+.min-w-0-safe {
+  min-width: 0;
+}
+
 /* Layered page backdrop — deliberately tinted so white cards read as raised surfaces */
 .page-canvas {
   position: relative;
@@ -204,4 +232,31 @@ html {
   background: linear-gradient(90deg, transparent 33%, rgba(255,255,255,0.3) 50%, transparent 67%);
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
+}
+
+/* Mobile slide-down nav panel */
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-down {
+  animation: slideDown 0.25s ease-out both;
+}
+
+/* Respect users who prefer reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-float-delayed,
+  .animate-float-slow,
+  .animate-gradient,
+  .animate-pulse-glow,
+  .animate-shimmer,
+  .animate-slide-down {
+    animation: none;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
 }

@@ -108,9 +108,9 @@ export default function HomePage() {
   };
 
   return (
-    <div className="overflow-hidden">
+    <div>
       {/* Hero */}
-      <section className="relative min-h-[90vh] flex items-center bg-gradient-to-br from-navy via-[#2a1d6b] to-[#0c3d8f]">
+      <section className="relative flex min-h-[90vh] items-center bg-gradient-to-br from-navy via-[#2a1d6b] to-[#0c3d8f] pt-[72px]">
         {/* Animated background shapes */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-cyan/10 animate-float" />
@@ -126,7 +126,7 @@ export default function HomePage() {
           />
         </div>
 
-        <div className="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
+        <div className="relative mx-auto max-w-7xl px-4 pb-20 pt-10 sm:px-6 sm:pb-28 sm:pt-16 lg:px-8">
           <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
             {/* Left: Text */}
             <motion.div
@@ -263,7 +263,7 @@ export default function HomePage() {
       {/* Featured Openings */}
       <section className="page-canvas py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex items-end justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <span className="eyebrow">Open Positions</span>
               <h2 className="mt-2 text-3xl font-bold text-navy sm:text-4xl">
@@ -275,7 +275,7 @@ export default function HomePage() {
             </div>
             <Link
               href="/jobs"
-              className="hidden items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-navy transition-all hover:shadow-md hover:border-ocean sm:inline-flex"
+              className="inline-flex items-center gap-1.5 self-start rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-navy transition-all hover:shadow-md hover:border-ocean sm:self-auto"
             >
               View all
               <ChevronRight className="h-4 w-4" />
@@ -325,7 +325,7 @@ export default function HomePage() {
                           </div>
                           <Badge variant={job.type}>{typeLabels[job.type]}</Badge>
                         </div>
-                        <h3 className={`mt-4 text-lg font-bold text-navy transition-colors ${t.hoverText}`}>
+                        <h3 className={`mt-4 text-lg font-bold leading-snug text-navy transition-colors ${t.hoverText}`}>
                           {job.title}
                         </h3>
                         <div className="mt-3 flex flex-col gap-1.5 text-sm text-gray-500">
@@ -357,7 +357,7 @@ export default function HomePage() {
             </div>
           )}
 
-          <div className="mt-8 text-center sm:hidden">
+          <div className="mt-8 text-center">
             <Link
               href="/jobs"
               className="inline-flex items-center gap-1.5 rounded-xl bg-navy px-6 py-3 text-sm font-medium text-white"
