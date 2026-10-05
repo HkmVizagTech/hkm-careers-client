@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { motion, useInView } from 'framer-motion';
+import { motion, useInView, useScroll, useTransform, useReducedMotion } from 'framer-motion';
 import {
   Search,
   MapPin,
@@ -21,7 +21,9 @@ import {
 } from 'lucide-react';
 import { getPublicJobs, getDepartments } from '@/lib/services';
 import { Badge } from '@/components/ui/Badge';
-import { Spinner } from '@/components/ui/Spinner';
+import { JobCardSkeleton } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Reveal, RevealGroup, RevealItem } from '@/components/ui/Reveal';
 import type { Job, Department } from '@/types';
 
 const typeLabels: Record<string, string> = {
@@ -49,9 +51,14 @@ function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: str
   const [count, setCount] = useState(0);
   const ref = useRef<HTMLSpanElement>(null);
   const isInView = useInView(ref, { once: true });
+  const reduce = useReducedMotion();
 
   useEffect(() => {
     if (!isInView) return;
+    if (reduce) {
+      setCount(target);
+      return;
+    }
     let start = 0;
     const duration = 2000;
     const increment = target / (duration / 16);
@@ -65,7 +72,7 @@ function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: str
       }
     }, 16);
     return () => clearInterval(timer);
-  }, [isInView, target]);
+  }, [isInView, target, reduce]);
 
   return (
     <span ref={ref} className="tabular-nums">
@@ -80,6 +87,11 @@ export default function HomePage() {
   const [featuredJobs, setFeaturedJobs] = useState<Job[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
+  const heroRef = useRef<HTMLElement>(null);
+  const { scrollYProgress: heroProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
+  const heroTextY = useTransform(heroProgress, [0, 1], [0, 80]);
+  const heroTextOpacity = useTransform(heroProgress, [0, 0.8], [1, 0.2]);
+  const shapesY = useTransform(heroProgress, [0, 1], [0, 140]);
 
   useEffect(() => {
     async function load() {
@@ -110,9 +122,9 @@ export default function HomePage() {
   return (
     <div>
       {/* Hero */}
-      <section className="relative flex min-h-[90vh] items-center bg-gradient-to-br from-navy via-[#2a1d6b] to-[#0c3d8f] pt-[72px]">
+      <section ref={heroRef} className="relative flex min-h-[90vh] items-center bg-gradient-to-br from-navy via-[#2a1d6b] to-[#0c3d8f] pt-[72px]">
         {/* Animated background shapes */}
-        <div className="absolute inset-0 overflow-hidden">
+        <motion.div style={{ y: shapesY }} className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-cyan/10 animate-float" />
           <div className="absolute -bottom-32 -left-32 h-[400px] w-[400px] rounded-full bg-gold/10 animate-float-delayed" />
           <div className="absolute top-1/3 left-1/4 h-[300px] w-[300px] rounded-full bg-ocean/20 animate-float-slow" />
@@ -124,7 +136,7 @@ export default function HomePage() {
               backgroundSize: '60px 60px',
             }}
           />
-        </div>
+        </motion.div>
 
         <div className="relative mx-auto max-w-7xl px-4 pb-20 pt-10 sm:px-6 sm:pb-28 sm:pt-16 lg:px-8">
           <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
@@ -134,6 +146,7 @@ export default function HomePage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7 }}
             >
+             <motion.div style={{ y: heroTextY, opacity: heroTextOpacity }}>
               <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-xs font-medium text-cyan backdrop-blur-sm border border-white/10">
                 <Sparkles className="h-3.5 w-3.5" />
                 We&apos;re hiring across multiple departments
@@ -158,7 +171,7 @@ export default function HomePage() {
                       placeholder="Search positions..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full rounded-2xl border-0 bg-white py-4 pl-12 pr-4 text-sm text-gray-900 shadow-2xl shadow-black/10 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan"
+                      aria-label="Search positions" className="w-full rounded-2xl border-0 bg-white py-4 pl-12 pr-4 text-base text-gray-900 shadow-2xl shadow-black/10 placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-cyan/60 sm:text-sm"
                     />
                   </div>
                   <button
@@ -185,6 +198,21 @@ export default function HomePage() {
                   Learn About Us
                 </Link>
               </div>
+
+              {/* Compact stats for phones and tablets (the glass cards are desktop-only) */}
+              <dl className="mt-10 grid grid-cols-3 gap-3 lg:hidden">
+                {[
+                  { label: 'Team members', value: '200+' },
+                  { label: 'Meals daily', value: '10,000+' },
+                  { label: 'Years serving', value: '25+' },
+                ].map((s) => (
+                  <div key={s.label} className="rounded-2xl border border-white/10 bg-white/10 px-3 py-3 text-center backdrop-blur-sm">
+                    <dd className="text-lg font-bold text-white sm:text-xl">{s.value}</dd>
+                    <dt className="mt-0.5 text-[11px] text-white/60">{s.label}</dt>
+                  </div>
+                ))}
+              </dl>
+             </motion.div>
             </motion.div>
 
             {/* Right: Stats cards */}
@@ -232,7 +260,7 @@ export default function HomePage() {
       {departments.length > 0 && (
         <section className="page-canvas relative -mt-1 py-12">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-wrap justify-center gap-3">
+            <RevealGroup className="flex flex-wrap justify-center gap-3" stagger={0.06}>
               {departments.map((dept, i) => {
                 const tints = [
                   { ring: 'hover:border-ocean/60', chip: 'bg-ocean/10 text-ocean group-hover:bg-ocean' },
@@ -243,8 +271,8 @@ export default function HomePage() {
                 ];
                 const t = tints[i % tints.length];
                 return (
+                  <RevealItem key={dept._id}>
                   <Link
-                    key={dept._id}
                     href={`/jobs?department=${dept._id}`}
                     className={`group inline-flex items-center gap-2.5 rounded-2xl border border-white/80 bg-white px-6 py-3.5 text-sm font-medium text-navy shadow-lift ring-1 ring-navy/[0.04] transition-all hover:shadow-glow hover:-translate-y-0.5 ${t.ring}`}
                   >
@@ -253,9 +281,10 @@ export default function HomePage() {
                     </div>
                     {dept.name}
                   </Link>
+                  </RevealItem>
                 );
               })}
-            </div>
+            </RevealGroup>
           </div>
         </section>
       )}
@@ -263,7 +292,7 @@ export default function HomePage() {
       {/* Featured Openings */}
       <section className="page-canvas py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <Reveal className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <span className="eyebrow">Open Positions</span>
               <h2 className="mt-2 text-3xl font-bold text-navy sm:text-4xl">
@@ -280,21 +309,19 @@ export default function HomePage() {
               View all
               <ChevronRight className="h-4 w-4" />
             </Link>
-          </div>
+          </Reveal>
 
           {loading ? (
-            <div className="flex justify-center py-20">
-              <Spinner size="lg" />
+            <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">
+              {Array.from({ length: 3 }, (_, i) => <JobCardSkeleton key={i} />)}
             </div>
           ) : featuredJobs.length === 0 ? (
-            <div className="mt-8 rounded-3xl border border-gray-200 bg-white py-16 text-center">
-              <Briefcase className="mx-auto h-14 w-14 text-gray-200" />
-              <p className="mt-4 text-lg font-medium text-gray-900">
-                No open positions at the moment
-              </p>
-              <p className="mt-1 text-sm text-gray-500">
-                Check back soon — new roles are posted regularly
-              </p>
+            <div className="mt-8 rounded-3xl border border-hairline bg-white shadow-soft">
+              <EmptyState
+                icon={Briefcase}
+                title="No open positions at the moment"
+                description="Check back soon — new roles are posted regularly."
+              />
             </div>
           ) : (
             <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -360,7 +387,7 @@ export default function HomePage() {
           <div className="mt-8 text-center">
             <Link
               href="/jobs"
-              className="inline-flex items-center gap-1.5 rounded-xl bg-navy px-6 py-3 text-sm font-medium text-white"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-navy px-6 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-ocean hover:shadow-lift active:scale-[0.98]"
             >
               View all openings
               <ChevronRight className="h-4 w-4" />
@@ -373,7 +400,7 @@ export default function HomePage() {
       <section className="page-canvas-deep relative py-16 sm:py-20">
         <div className="canvas-dots pointer-events-none absolute inset-0 opacity-50" />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col items-center text-center">
+          <Reveal className="flex flex-col items-center text-center">
             <span className="eyebrow">Process</span>
             <h2 className="mt-2 text-3xl font-bold text-navy sm:text-4xl">
               How to Get Started
@@ -381,7 +408,7 @@ export default function HomePage() {
             <p className="mx-auto mt-3 max-w-xl text-gray-500">
               A simple, transparent process from application to onboarding
             </p>
-          </div>
+          </Reveal>
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {steps.map((step, i) => {
               const bars = ['from-navy to-ocean', 'from-ocean to-cyan', 'from-plum to-plumDeep', 'from-gold to-goldDeep'];
@@ -420,7 +447,7 @@ export default function HomePage() {
       {/* Life at HKM */}
       <section className="page-canvas py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col items-center text-center">
+          <Reveal className="flex flex-col items-center text-center">
             <span className="eyebrow">Why Us</span>
             <h2 className="mt-2 text-3xl font-bold text-navy sm:text-4xl">
               Life at HKM Vizag
@@ -428,7 +455,7 @@ export default function HomePage() {
             <p className="mx-auto mt-3 max-w-xl text-gray-500">
               More than a workplace — a chance to be part of something meaningful
             </p>
-          </div>
+          </Reveal>
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {highlights.map((item, i) => (
               <motion.div

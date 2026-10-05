@@ -24,11 +24,14 @@ import {
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Spinner } from '@/components/ui/Spinner';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { toast } from '@/lib/toast';
+
 import { formatDate } from '@/lib/utils';
 import type { AdminUser } from '@/types';
 
 const inputClass =
-  'w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm transition-all focus:border-ocean focus:bg-white focus:outline-none focus:ring-2 focus:ring-ocean/20';
+  'w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm transition-all focus:border-ocean focus:bg-white focus:outline-none focus:ring-4 focus:ring-ocean/15';
 
 export default function SettingsPage() {
   const { user, updateUser } = useAuth();
@@ -126,13 +129,13 @@ export default function SettingsPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+        <h1 className="text-2xl font-bold text-navy">Settings</h1>
         <p className="mt-1 text-sm text-gray-500">Manage your account and team admins</p>
       </div>
 
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mt-6 space-y-6">
         {/* Profile Card */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-hairline bg-white p-6 shadow-soft">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-navy to-ocean text-base font-bold text-white shadow-lg shadow-navy/20">
               {user?.name?.charAt(0).toUpperCase() || 'A'}
@@ -145,7 +148,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Profile Settings */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-hairline bg-white p-6 shadow-soft">
           <h3 className="flex items-center gap-2 text-base font-bold text-gray-900">
             <User className="h-5 w-5 text-ocean" /> Profile Information
           </h3>
@@ -184,7 +187,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Team Admins */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-hairline bg-white p-6 shadow-soft">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="flex items-center gap-2 text-base font-bold text-gray-900">
@@ -263,7 +266,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Security Info */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-hairline bg-white p-6 shadow-soft">
           <h3 className="flex items-center gap-2 text-base font-bold text-gray-900">
             <Shield className="h-5 w-5 text-ocean" /> Security
           </h3>

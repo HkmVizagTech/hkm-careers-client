@@ -14,7 +14,8 @@ import {
 } from 'lucide-react';
 import api from '@/lib/api';
 import { Badge } from '@/components/ui/Badge';
-import { Spinner } from '@/components/ui/Spinner';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { formatDate } from '@/lib/utils';
 import type { Application } from '@/types';
 
@@ -72,7 +73,15 @@ export default function DashboardPage() {
     load();
   }, []);
 
-  if (loading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
+  if (loading) return (
+    <div aria-busy="true">
+      <Skeleton className="h-8 w-48" />
+      <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-28" />)}
+      </div>
+      <Skeleton className="mt-8 h-72" />
+    </div>
+  );
 
   const displayStats = stats ? {
     openPositions: stats.openPositions,
@@ -84,7 +93,7 @@ export default function DashboardPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <h1 className="text-2xl font-bold text-navy">Dashboard</h1>
         <p className="mt-1 text-sm text-gray-500">Overview of your careers portal</p>
       </div>
 
@@ -98,7 +107,7 @@ export default function DashboardPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: i * 0.05 }}
             >
-              <div className={`rounded-2xl bg-gradient-to-br ${card.gradient} p-5 text-white shadow-lg ${card.shadowColor} transition-transform hover:scale-[1.02]`}>
+              <div className={`rounded-2xl bg-gradient-to-br ${card.gradient} p-5 text-white shadow-lg ${card.shadowColor} transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl`}>
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-white/80">{card.label}</p>
@@ -119,7 +128,7 @@ export default function DashboardPage() {
       {/* Recent Applications */}
       <div className="mt-8">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-gray-900">Recent Applications</h2>
+          <h2 className="text-lg font-bold text-navy">Recent Applications</h2>
           <Link
             href="/admin/applications"
             className="inline-flex items-center gap-1 text-sm font-medium text-ocean hover:text-navy transition-colors"
@@ -129,17 +138,15 @@ export default function DashboardPage() {
         </div>
 
         {(!stats?.recentApplications || stats.recentApplications.length === 0) ? (
-          <div className="mt-4 rounded-2xl border border-gray-200 bg-white py-16 text-center">
-            <FileText className="mx-auto h-12 w-12 text-gray-200" />
-            <p className="mt-4 text-base font-medium text-gray-900">No applications yet</p>
-            <p className="mt-1 text-sm text-gray-500">Applications will appear here once candidates start applying.</p>
+          <div className="mt-4 rounded-2xl border border-hairline bg-white shadow-soft">
+            <EmptyState icon={FileText} title="No applications yet" description="Applications will appear here once candidates start applying." />
           </div>
         ) : (
-          <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-white">
+          <div className="mt-4 overflow-hidden rounded-2xl border border-hairline bg-white shadow-soft">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50/80">
+                  <tr className="border-b border-hairline bg-surfaceAlt/70">
                     <th className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500">Candidate</th>
                     <th className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500">Job</th>
                     <th className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500">Status</th>
@@ -148,7 +155,7 @@ export default function DashboardPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {stats.recentApplications.map((app) => (
-                    <tr key={app._id} className="transition-colors hover:bg-gray-50/50">
+                    <tr key={app._id} className="transition-colors hover:bg-ocean/[0.04]">
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-navy to-ocean text-xs font-bold text-white">
@@ -156,7 +163,7 @@ export default function DashboardPage() {
                           </div>
                           <div>
                             <p className="font-semibold text-gray-900">{app.name}</p>
-                            <p className="text-xs text-gray-400">{app.email}</p>
+                            <p className="text-xs text-gray-500">{app.email}</p>
                           </div>
                         </div>
                       </td>

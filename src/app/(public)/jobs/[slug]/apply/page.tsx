@@ -663,7 +663,7 @@ export default function ApplyPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="overflow-hidden rounded-3xl border border-hairline bg-white shadow-2xl shadow-navy/15 ring-1 ring-navy/[0.03]"
+          className="overflow-hidden rounded-3xl border border-hairline bg-white shadow-xl shadow-navy/10"
         >
           {/* Gradient top bar */}
           <div className="h-2 bg-gradient-to-r from-navy via-plum to-cyan" />
@@ -721,7 +721,7 @@ export default function ApplyPage() {
               </div>
             )}
 
-            <form ref={formRef} onKeyDown={handleFormKeyDown} onSubmit={handleSubmit(onSubmit, onInvalid)} className="mt-6 space-y-6 sm:mt-8 sm:space-y-8">
+            <form ref={formRef} onKeyDown={handleFormKeyDown} onSubmit={handleSubmit(onSubmit, onInvalid)} className="mt-6 space-y-6 sm:mt-8 sm:space-y-8 [&>*:not(.hidden)~*:not(.hidden)]:border-t [&>*:not(.hidden)~*:not(.hidden)]:border-hairline [&>*:not(.hidden)~*:not(.hidden)]:pt-6 sm:[&>*:not(.hidden)~*:not(.hidden)]:pt-8">
               {/* Section: Personal Info */}
               <div className={showsSection('personal') ? '' : 'hidden'}>
                 <h3 className="flex items-center gap-2 text-sm font-bold text-navy uppercase tracking-wider">
@@ -730,7 +730,7 @@ export default function ApplyPage() {
                   </div>
                   Personal Information
                 </h3>
-                <div className="mt-4 space-y-4 rounded-2xl border border-gray-200/80 bg-gradient-to-br from-gray-50 to-gray-100/50 p-4 sm:space-y-5 sm:p-6 shadow-inner">
+                <div className="mt-5 space-y-4 sm:space-y-5">
                   {/* Name */}
                   <Field label="Full Name" required error={errors.name?.message}>
                     <div className="relative">
@@ -836,7 +836,7 @@ export default function ApplyPage() {
                   </div>
                   Work Experience
                 </h3>
-                <div className="mt-4 rounded-2xl border border-gray-200 bg-gradient-to-br from-ocean/[0.03] to-white p-5 sm:p-6 shadow-sm">
+                <div className="mt-5">
                   <label className="mb-3 block text-sm font-semibold text-gray-700">
                     Do you have prior work experience?
                   </label>
@@ -879,7 +879,7 @@ export default function ApplyPage() {
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
                       transition={{ duration: 0.3 }}
-                      className="mt-5 space-y-5 overflow-hidden rounded-xl border border-ocean/30 bg-gradient-to-br from-ocean/[0.05] to-cyan/[0.03] p-5 shadow-sm"
+                      className="mt-5 space-y-5 overflow-hidden border-l-2 border-ocean/30 pl-4 pr-1"
                     >
                       <div className="flex items-center gap-2 text-sm font-semibold text-ocean">
                         <Clock className="h-4 w-4" />
@@ -973,7 +973,7 @@ export default function ApplyPage() {
                   Online Profiles
                   <span className="text-xs font-normal text-gray-400 normal-case tracking-normal">(optional — increases shortlisting chances)</span>
                 </h3>
-                <div className="mt-4 rounded-2xl border border-gray-200/80 bg-gradient-to-br from-purple-50/30 to-gray-100/30 p-5 sm:p-6 shadow-inner">
+                <div className="mt-5">
                   <div className="flex flex-wrap gap-3">
                     {!showLinkedin && (
                       <button type="button" onClick={() => setShowLinkedin(true)}
@@ -1059,7 +1059,7 @@ export default function ApplyPage() {
                     </div>
                     Educational Information
                   </h3>
-                  <div className="mt-4 space-y-5 rounded-2xl border border-gray-200/80 bg-gradient-to-br from-emerald-50/30 to-gray-100/30 p-5 sm:p-6 shadow-inner">
+                  <div className="mt-5 space-y-5">
                     <div className="grid gap-5 sm:grid-cols-2">
                       <Field label="Highest Degree" required error={errors.highestDegree?.message}>
                         <Controller
@@ -1123,7 +1123,7 @@ export default function ApplyPage() {
                   </div>
                   Your Motivation
                 </h3>
-                <div className="mt-4 rounded-2xl border border-gray-200/80 bg-gradient-to-br from-rose/[0.03] to-gray-100/30 p-4 sm:p-6 shadow-inner">
+                <div className="mt-5">
                   <Field label="Why should we hire you?" required error={errors.coverLetter?.message}>
                     <textarea
                       placeholder="Tell us why you'd be a great fit for this role, what unique skills you bring, and what motivates you to join HKM Vizag..."
@@ -1143,7 +1143,7 @@ export default function ApplyPage() {
                   </div>
                   Resume
                 </h3>
-                <div className="mt-4 rounded-2xl border border-gray-200/80 bg-gradient-to-br from-gold/[0.03] to-gray-100/30 p-4 sm:p-6 shadow-inner">
+                <div className="mt-5">
                   <div>
                     <label className="mb-1.5 block text-sm font-semibold text-gray-700">
                       Resume / CV <span className="text-red-500">*</span>
@@ -1210,7 +1210,7 @@ export default function ApplyPage() {
 
               {/* Review summary — collapsible on the final step */}
               {step === totalSteps && (
-                <div className="rounded-2xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white p-5 sm:p-6">
+                <div className="rounded-xl bg-surfaceAlt/70 p-4 sm:p-5">
                   <details>
                     <summary className="flex cursor-pointer select-none items-center gap-2 text-sm font-bold text-navy">
                       <Eye className="h-4 w-4 text-ocean" />
@@ -1234,7 +1234,7 @@ export default function ApplyPage() {
               )}
 
               {/* Step navigation */}
-              <div ref={navRef} className="rounded-2xl border border-ocean/15 bg-gradient-to-br from-navy/[0.03] via-plum/[0.02] to-ocean/[0.03] p-5 sm:p-6">
+              <div ref={navRef} className="pt-1">
                 {step === totalSteps && (
                   <div className="mb-4 flex items-start gap-2">
                     <Shield className="mt-0.5 h-4 w-4 flex-shrink-0 text-ocean" />

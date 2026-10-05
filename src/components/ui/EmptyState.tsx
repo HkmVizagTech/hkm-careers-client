@@ -24,12 +24,12 @@ function EmptyState({
         className
       )}
     >
-      <div className="mb-4 rounded-full bg-gray-100 p-4">
-        <Icon className="h-8 w-8 text-gray-400" strokeWidth={1.5} />
+      <div className="mb-5 rounded-full bg-gradient-to-br from-ocean/10 to-cyan/20 p-5 ring-8 ring-ocean/5">
+        <Icon className="h-8 w-8 text-ocean" strokeWidth={1.5} />
       </div>
-      <h3 className="mb-1 text-lg font-medium text-gray-900">{title}</h3>
+      <h3 className="mb-1 text-lg font-semibold text-navy">{title}</h3>
       {description && (
-        <p className="mb-6 max-w-sm text-sm text-gray-500">{description}</p>
+        <p className="mb-6 max-w-sm text-sm leading-relaxed text-gray-500">{description}</p>
       )}
       {action && <div>{action}</div>}
     </div>

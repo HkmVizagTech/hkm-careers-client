@@ -6,6 +6,15 @@ import AdminSidebar from '@/components/layout/AdminSidebar';
 import AdminHeader from '@/components/layout/AdminHeader';
 import { useAuth } from '@/hooks/useAuth';
 import { Spinner } from '@/components/ui/Spinner';
+import { Toaster } from '@/components/ui/Toaster';
+
+const pageTitles: [string, string][] = [
+  ['/admin/dashboard', 'Dashboard'],
+  ['/admin/jobs', 'Jobs'],
+  ['/admin/applications', 'Applications'],
+  ['/admin/departments', 'Departments'],
+  ['/admin/settings', 'Settings & Team'],
+];
 
 const publicAdminRoutes = ['/admin/login'];
 
@@ -20,6 +29,7 @@ export default function AdminLayout({
   const pathname = usePathname();
 
   const isPublicRoute = publicAdminRoutes.includes(pathname);
+  const title = pageTitles.find(([p]) => pathname === p || pathname.startsWith(p + '/'))?.[1] ?? 'Admin';
 
   useEffect(() => {
     if (!loading && !isAuthenticated && !isPublicRoute) {
@@ -47,11 +57,12 @@ export default function AdminLayout({
     <div className="flex h-screen overflow-hidden bg-background">
       <AdminSidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(false)} />
       <div className="flex flex-1 flex-col overflow-hidden">
-        <AdminHeader title="Admin" onMenuToggle={() => setSidebarOpen(true)} />
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
-          {children}
+        <AdminHeader title={title} onMenuToggle={() => setSidebarOpen(true)} />
+        <main id="admin-main" className="flex-1 overflow-y-auto bg-surfaceAlt/50 p-4 sm:p-6 lg:p-8">
+          <div className="mx-auto max-w-7xl">{children}</div>
         </main>
       </div>
+      <Toaster />
     </div>
   );
 }

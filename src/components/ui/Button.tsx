@@ -4,16 +4,17 @@ import React, { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 
 const variantStyles = {
-  primary: 'bg-navy text-white hover:bg-navy/90',
-  secondary: 'bg-ocean text-white hover:bg-ocean/90',
+  primary: 'bg-navy text-white shadow-sm hover:bg-ocean hover:shadow-lift',
+  secondary: 'bg-ocean text-white shadow-sm hover:bg-navy hover:shadow-lift',
   outline: 'border border-navy text-navy hover:bg-navy/5 bg-transparent',
   ghost: 'text-navy hover:bg-navy/5 bg-transparent',
-  danger: 'bg-red-600 text-white hover:bg-red-700',
+  danger: 'bg-red-600 text-white shadow-sm hover:bg-red-700',
+  gold: 'bg-gradient-to-r from-gold to-goldDeep text-navy font-bold shadow-md shadow-gold/25 hover:shadow-lg hover:shadow-gold/40',
 } as const;
 
 const sizeStyles = {
-  sm: 'px-3 py-1.5 text-sm',
-  md: 'px-5 py-2.5 text-sm',
+  sm: 'px-3.5 py-2 text-sm',
+  md: 'px-5 py-3 text-sm',
   lg: 'px-6 py-3 text-base',
 } as const;
 
@@ -42,7 +43,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || loading}
         className={cn(
-          'inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ocean focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+          'inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-ocean focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100',
           variantStyles[variant],
           sizeStyles[size],
           className

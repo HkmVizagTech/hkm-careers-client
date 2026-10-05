@@ -14,6 +14,7 @@ import {
   AlertCircle,
   Share2,
   Bookmark,
+  BookmarkCheck,
   FileText,
   ListChecks,
   GraduationCap,
@@ -27,7 +28,7 @@ import {
 import { getPublicJobBySlug } from '@/lib/services';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Spinner } from '@/components/ui/Spinner';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { formatDate } from '@/lib/utils';
 import type { Job } from '@/types';
 
@@ -76,6 +77,34 @@ export default function JobDetailPage() {
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  // "Save" keeps a list of bookmarked job slugs in this browser only.
+  useEffect(() => {
+    try {
+      const list: string[] = JSON.parse(localStorage.getItem('hkm-saved-jobs') || '[]');
+      setSaved(list.includes(slug));
+    } catch { /* storage unavailable */ }
+  }, [slug]);
+
+  const toggleSaved = () => {
+    try {
+      const list: string[] = JSON.parse(localStorage.getItem('hkm-saved-jobs') || '[]');
+      const next = list.includes(slug) ? list.filter((s) => s !== slug) : [...list, slug];
+      localStorage.setItem('hkm-saved-jobs', JSON.stringify(next));
+      setSaved(next.includes(slug));
+    } catch {
+      setSaved((v) => !v);
+    }
+  };
+
+  // Escape closes the confirm dialog.
+  useEffect(() => {
+    if (!confirmOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setConfirmOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [confirmOpen]);
 
   useEffect(() => {
     async function load() {
@@ -101,10 +130,23 @@ export default function JobDetailPage() {
     };
   }, [confirmOpen]);
 
-  const handleCopyLink = () => {
-    navigator.clipboard?.writeText(window.location.href);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* clipboard blocked — the link is still visible in the share box */ }
+  };
+
+  // Phones get the native share sheet; desktops fall back to copying the link.
+  const handleShare = async () => {
+    if (typeof navigator !== 'undefined' && navigator.share && job) {
+      try {
+        await navigator.share({ title: job.title, url: window.location.href });
+        return;
+      } catch { /* cancelled */ }
+    }
+    handleCopyLink();
   };
 
   const startApplication = () => {
@@ -114,8 +156,21 @@ export default function JobDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center bg-background">
-        <Spinner size="lg" />
+      <div className="page-canvas min-h-screen" aria-busy="true">
+        <div className="bg-gradient-to-br from-navy via-[#2a1d6b] to-ocean pb-12 pt-[120px]">
+          <div className="mx-auto max-w-6xl space-y-4 px-4 sm:px-6 lg:px-8">
+            <Skeleton className="h-4 w-24 bg-white/20" />
+            <Skeleton className="h-10 w-2/3 bg-white/20" />
+            <Skeleton className="h-8 w-1/2 bg-white/10" />
+          </div>
+        </div>
+        <div className="mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:px-6 lg:grid-cols-3 lg:px-8">
+          <div className="space-y-6 lg:col-span-2">
+            <Skeleton className="h-56" />
+            <Skeleton className="h-44" />
+          </div>
+          <Skeleton className="h-72" />
+        </div>
       </div>
     );
   }
@@ -225,7 +280,7 @@ export default function JobDetailPage() {
               Apply Now
             </button>
             <button
-              onClick={handleCopyLink}
+              onClick={handleShare}
               className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/20 px-6 py-3.5 text-sm font-semibold text-white/80 transition-all hover:bg-white/10 hover:text-white"
             >
               <Share2 className="h-4 w-4" />
@@ -248,7 +303,7 @@ export default function JobDetailPage() {
             {/* About This Role */}
             <motion.div
               variants={fadeUp}
-              className="overflow-hidden rounded-2xl border border-gray-200/80 bg-gradient-to-br from-white to-gray-50/30 shadow-xl shadow-navy/5"
+              className="overflow-hidden rounded-2xl border border-hairline bg-white shadow-soft"
             >
               <div className="flex items-center gap-3 border-b border-gray-100 px-5 py-5 sm:px-8">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-navy to-ocean text-white shadow-md shadow-navy/20">
@@ -265,7 +320,7 @@ export default function JobDetailPage() {
             {job.responsibilities && (
               <motion.div
                 variants={fadeUp}
-                className="overflow-hidden rounded-2xl border border-gray-200/80 bg-gradient-to-br from-white to-ocean/[0.02] shadow-xl shadow-navy/5"
+                className="overflow-hidden rounded-2xl border border-hairline bg-white shadow-soft"
               >
                 <div className="flex items-center gap-3 border-b border-gray-100 px-5 py-5 sm:px-8">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-ocean to-cyan text-white shadow-md shadow-ocean/20">
@@ -283,7 +338,7 @@ export default function JobDetailPage() {
             {job.qualifications && (
               <motion.div
                 variants={fadeUp}
-                className="overflow-hidden rounded-2xl border border-gray-200/80 bg-gradient-to-br from-white to-gold/[0.03] shadow-xl shadow-navy/5"
+                className="overflow-hidden rounded-2xl border border-hairline bg-white shadow-soft"
               >
                 <div className="flex items-center gap-3 border-b border-gray-100 px-5 py-5 sm:px-8">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-gold to-amber-500 text-white shadow-md shadow-gold/20">
@@ -302,7 +357,7 @@ export default function JobDetailPage() {
           <motion.div variants={fadeUp} className="min-w-0 space-y-6">
             <div className="space-y-6 lg:sticky lg:top-24">
               {/* Apply Card */}
-              <div className="overflow-hidden rounded-2xl border border-gray-200/80 bg-gradient-to-br from-white via-white to-ocean/[0.04] shadow-xl shadow-navy/5">
+              <div className="overflow-hidden rounded-2xl border border-hairline bg-white shadow-lift">
                 <div className="h-1.5 bg-gradient-to-r from-navy via-ocean to-cyan" />
                 <div className="p-6">
                   <h3 className="text-lg font-bold text-navy">Interested?</h3>
@@ -318,13 +373,17 @@ export default function JobDetailPage() {
                   </button>
 
                   <div className="mt-4 flex gap-2">
-                    <button className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100">
-                      <Bookmark className="h-4 w-4" />
-                      Save
+                    <button
+                      onClick={toggleSaved}
+                      aria-pressed={saved}
+                      className={`flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-all ${saved ? 'border-ocean/30 bg-ocean/10 text-ocean' : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+                    >
+                      {saved ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
+                      {saved ? 'Saved' : 'Save'}
                     </button>
                     <button
-                      onClick={handleCopyLink}
-                      className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100"
+                      onClick={handleShare}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-600 transition-all hover:bg-gray-100"
                     >
                       <Share2 className="h-4 w-4" />
                       Share
@@ -334,7 +393,7 @@ export default function JobDetailPage() {
               </div>
 
               {/* Job Details Card */}
-              <div className="overflow-hidden rounded-2xl border border-gray-200/80 bg-gradient-to-br from-white via-white to-navy/[0.03] shadow-xl shadow-navy/5">
+              <div className="overflow-hidden rounded-2xl border border-hairline bg-white shadow-soft">
                 <div className="border-b border-gray-100 px-6 py-4">
                   <h3 className="text-sm font-bold uppercase tracking-wider text-navy">
                     Job Details
@@ -404,7 +463,7 @@ export default function JobDetailPage() {
               </div>
 
               {/* Share This Job Card */}
-              <div className="overflow-hidden rounded-2xl border border-gray-200/80 bg-gradient-to-br from-white via-white to-cyan/[0.04] shadow-xl shadow-navy/5">
+              <div className="overflow-hidden rounded-2xl border border-hairline bg-white shadow-soft">
                 <div className="border-b border-gray-100 px-6 py-4">
                   <h3 className="text-sm font-bold uppercase tracking-wider text-navy">
                     Share This Job
@@ -463,7 +522,7 @@ export default function JobDetailPage() {
       </div>
 
       {/* Mobile sticky apply bar */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 p-3 shadow-[0_-4px_24px_rgba(5,32,87,0.12)] backdrop-blur-xl sm:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_24px_rgba(5,32,87,0.12)] backdrop-blur-xl sm:hidden">
         <button
           onClick={() => setConfirmOpen(true)}
           className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-navy to-ocean px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-navy/25 active:scale-[0.98]"
@@ -498,7 +557,7 @@ export default function JobDetailPage() {
                 </div>
                 <button
                   onClick={() => setConfirmOpen(false)}
-                  className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                  className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
                   aria-label="Close"
                 >
                   <X className="h-5 w-5" />
@@ -513,7 +572,7 @@ export default function JobDetailPage() {
                 application — and helps our team respond faster.
               </p>
 
-              <ul className="mt-5 space-y-2.5 rounded-2xl border border-ocean/15 bg-gradient-to-br from-ocean/[0.05] to-cyan/[0.03] p-4 text-sm text-gray-600">
+              <ul className="mt-5 space-y-2.5 border-l-2 border-ocean/30 pl-4 text-sm text-gray-600">
                 <li className="flex items-center gap-2.5">
                   <CheckCircle className="h-4 w-4 shrink-0 text-ocean" />
                   Yes, I&apos;ve read the description

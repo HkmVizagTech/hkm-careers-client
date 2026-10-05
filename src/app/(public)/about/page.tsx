@@ -10,6 +10,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
+import { Reveal, RevealGroup, RevealItem } from '@/components/ui/Reveal';
 
 const values = [
   { icon: Heart, title: 'Compassion', desc: 'We believe in serving all living beings with love and care, regardless of background.', color: 'from-red-400 to-pink-500' },
@@ -49,7 +50,7 @@ export default function AboutPage() {
           <div className="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-cyan/10 animate-float" />
           <div className="absolute -bottom-32 -left-32 h-[400px] w-[400px] rounded-full bg-gold/10 animate-float-delayed" />
         </div>
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
+        <Reveal y={16} className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
           <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-xs font-medium text-cyan backdrop-blur-sm border border-white/10">
             <Sparkles className="h-3.5 w-3.5" />
             Our Story
@@ -61,20 +62,20 @@ export default function AboutPage() {
             Hare Krishna Movement Visakhapatnam has been serving the community since 1998 through
             spiritual education, food distribution, and social welfare programs.
           </p>
-        </div>
+        </Reveal>
       </section>
 
       {/* Stats */}
       <section className="page-canvas relative -mt-8">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+          <RevealGroup className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4" stagger={0.07}>
             {stats.map((stat) => (
-              <div key={stat.label} className="rounded-2xl border border-gray-200 bg-white p-4 text-center shadow-lg shadow-navy/5 sm:p-6">
+              <RevealItem key={stat.label} className="rounded-2xl border border-hairline bg-white p-4 text-center shadow-lift sm:p-6">
                 <p className="text-2xl font-bold text-gradient sm:text-3xl">{stat.value}</p>
-                <p className="mt-1 text-xs text-gray-500 sm:text-sm">{stat.label}</p>
-              </div>
+                <p className="mt-1 text-xs text-gray-600 sm:text-sm">{stat.label}</p>
+              </RevealItem>
             ))}
-          </div>
+          </RevealGroup>
         </div>
       </section>
 
@@ -82,8 +83,8 @@ export default function AboutPage() {
       <section className="bg-white py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
-            <div>
-              <span className="text-sm font-semibold text-ocean">Our Mission</span>
+            <Reveal>
+              <span className="eyebrow">Our Mission</span>
               <h2 className="mt-2 text-3xl font-bold text-navy sm:text-4xl">
                 Creating a Society Based on Spiritual Values
               </h2>
@@ -100,18 +101,18 @@ export default function AboutPage() {
                 className="mt-6 inline-flex items-center gap-2 rounded-xl bg-navy/5 px-5 py-2.5 text-sm font-semibold text-navy transition-all hover:bg-navy/10">
                 <Globe className="h-4 w-4" /> Visit our main website <ArrowRight className="h-4 w-4" />
               </a>
-            </div>
-            <div className="grid grid-cols-1 gap-5 min-[420px]:grid-cols-2">
+            </Reveal>
+            <RevealGroup className="grid grid-cols-1 gap-5 min-[420px]:grid-cols-2">
               {values.map((v) => (
-                <div key={v.title} className="rounded-2xl border border-white/70 bg-white p-5 shadow-lift ring-1 ring-navy/[0.04] transition-all hover:shadow-glow hover:-translate-y-1">
+                <RevealItem key={v.title} className="rounded-2xl border border-hairline bg-white p-5 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lift">
                   <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${v.color} text-white shadow-md`}>
                     <v.icon className="h-5 w-5" />
                   </div>
                   <h3 className="mt-3 text-base font-bold text-navy">{v.title}</h3>
                   <p className="mt-1.5 text-sm text-gray-500 leading-relaxed">{v.desc}</p>
-                </div>
+                </RevealItem>
               ))}
-            </div>
+            </RevealGroup>
           </div>
         </div>
       </section>
@@ -119,33 +120,33 @@ export default function AboutPage() {
       {/* Benefits */}
       <section className="page-canvas py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <span className="text-sm font-semibold text-ocean">Benefits</span>
-            <h2 className="mt-1 text-3xl font-bold text-navy sm:text-4xl">Why Join Us</h2>
-          </div>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Reveal className="flex flex-col items-center text-center">
+            <span className="eyebrow">Benefits</span>
+            <h2 className="mt-2 text-3xl font-bold text-navy sm:text-4xl">Why Join Us</h2>
+          </Reveal>
+          <RevealGroup className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" stagger={0.06}>
             {benefits.map((b) => (
-              <div key={b} className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+              <RevealItem key={b} className="flex h-full items-center gap-3 rounded-2xl border border-hairline bg-white p-5 shadow-soft">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-green-100">
                   <CheckCircle className="h-4 w-4 text-green-600" />
                 </div>
                 <span className="text-sm font-medium text-gray-700">{b}</span>
-              </div>
+              </RevealItem>
             ))}
-          </div>
+          </RevealGroup>
         </div>
       </section>
 
       {/* Testimonials */}
       <section className="bg-white py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <span className="text-sm font-semibold text-ocean">Testimonials</span>
-            <h2 className="mt-1 text-3xl font-bold text-navy sm:text-4xl">What Our Team Says</h2>
-          </div>
-          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <Reveal className="flex flex-col items-center text-center">
+            <span className="eyebrow">Testimonials</span>
+            <h2 className="mt-2 text-3xl font-bold text-navy sm:text-4xl">What Our Team Says</h2>
+          </Reveal>
+          <RevealGroup className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {testimonials.map((t) => (
-              <div key={t.name} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-lg hover:-translate-y-1">
+              <RevealItem key={t.name} className="h-full rounded-2xl border border-hairline bg-white p-6 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lift">
                 <div className="flex gap-1">
                   {[...Array(5)].map((_, i) => <Star key={i} className="h-4 w-4 fill-gold text-gold" />)}
                 </div>
@@ -156,18 +157,18 @@ export default function AboutPage() {
                   </div>
                   <div>
                     <p className="text-sm font-bold text-navy">{t.name}</p>
-                    <p className="text-xs text-gray-400">{t.role}</p>
+                    <p className="text-xs text-gray-500">{t.role}</p>
                   </div>
                 </div>
-              </div>
+              </RevealItem>
             ))}
-          </div>
+          </RevealGroup>
         </div>
       </section>
 
       {/* CTA */}
       <section className="page-canvas py-16 sm:py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
+        <Reveal className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl font-bold text-navy sm:text-4xl">Want to Be Part of Our Story?</h2>
           <p className="mx-auto mt-4 max-w-xl text-gray-500">
             Join a team that wakes up every day with a purpose — to serve, educate, and uplift.
@@ -176,7 +177,7 @@ export default function AboutPage() {
             className="mt-8 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-navy to-ocean px-8 py-4 text-sm font-bold text-white shadow-lg shadow-navy/20 transition-all hover:shadow-xl hover:scale-[1.02]">
             View Open Positions <ArrowRight className="h-4 w-4" />
           </Link>
-        </div>
+        </Reveal>
       </section>
     </div>
   );

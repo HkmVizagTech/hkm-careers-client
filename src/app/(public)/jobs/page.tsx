@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState, useCallback } from 'react';
+import { Suspense, useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -14,11 +14,12 @@ import {
   X,
   ArrowRight,
   Sparkles,
-  Clock,
+  AlertCircle,
 } from 'lucide-react';
 import { getPublicJobs, getDepartments } from '@/lib/services';
 import { Badge } from '@/components/ui/Badge';
-import { Spinner } from '@/components/ui/Spinner';
+import { JobCardSkeleton } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
 import type { Job, Department, PaginationInfo } from '@/types';
 
 const typeLabels: Record<string, string> = {
@@ -48,7 +49,7 @@ const cardThemes = [
 
 export default function JobsPage() {
   return (
-    <Suspense fallback={<div className="flex justify-center py-20"><Spinner size="lg" /></div>}>
+    <Suspense fallback={<div className="page-canvas min-h-screen pt-[140px]"><div className="mx-auto grid max-w-7xl gap-5 px-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-3 lg:px-8">{Array.from({ length: 3 }, (_, i) => <JobCardSkeleton key={i} />)}</div></div>}>
       <JobsContent />
     </Suspense>
   );
@@ -63,6 +64,8 @@ function JobsContent() {
   const [pagination, setPagination] = useState<PaginationInfo>({ total: 0, page: 1, pages: 0 });
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [error, setError] = useState(false);
+  const requestId = useRef(0);
 
   const search = searchParams.get('search') || '';
   const department = searchParams.get('department') || '';
@@ -72,31 +75,52 @@ function JobsContent() {
   const [searchInput, setSearchInput] = useState(search);
 
   const fetchJobs = useCallback(async () => {
+    const id = ++requestId.current;
     setLoading(true);
+    setError(false);
     try {
       const params: Record<string, string | number> = { page, limit: 9 };
       if (search) params.search = search;
       if (department) params.department = department;
       if (type) params.type = type;
       const data = await getPublicJobs(params);
+      if (id !== requestId.current) return; // a newer request superseded this one
       setJobs(data.jobs);
       setPagination(data.pagination);
-    } catch { /* */ } finally { setLoading(false); }
+    } catch {
+      if (id === requestId.current) setError(true);
+    } finally {
+      if (id === requestId.current) setLoading(false);
+    }
   }, [search, department, type, page]);
 
   useEffect(() => { fetchJobs(); }, [fetchJobs]);
   useEffect(() => { getDepartments({ active: true }).then(setDepartments).catch(() => {}); }, []);
+
+  // Keep the box in step with the URL (back/forward, "clear all").
+  useEffect(() => { setSearchInput(search); }, [search]);
+
+  // Live search: apply the typed query shortly after the visitor stops typing.
+  useEffect(() => {
+    if (searchInput === search) return;
+    const t = setTimeout(() => updateParams('search', searchInput.trim()), 450);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchInput]);
 
   const updateParams = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
     if (value) { params.set(key, value); } else { params.delete(key); }
     if (key !== 'page') params.delete('page');
     router.push(`/jobs?${params.toString()}`);
+    if (key === 'page') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSearch = (e: React.FormEvent) => { e.preventDefault(); updateParams('search', searchInput); };
   const clearFilters = () => { router.push('/jobs'); setSearchInput(''); };
   const hasFilters = search || department || type;
+  const activeDepartment = departments.find((d) => d._id === department)?.name;
+  const typeLabel = jobTypes.find((t) => t.value === type)?.label;
   const departmentName = (dept: Job['department']): string => (typeof dept === 'object' && dept !== null && 'name' in dept) ? dept.name : '';
 
   return (
@@ -126,11 +150,17 @@ function JobsContent() {
           <form onSubmit={handleSearch} className="flex flex-col gap-3 sm:flex-row">
             <div className="relative min-w-0 flex-1">
               <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <input type="text" placeholder="Search by title, skill, or keyword..." value={searchInput}
+              <input type="search" aria-label="Search positions" placeholder="Search by title, skill, or keyword..." value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                className="w-full rounded-2xl border border-white/80 bg-white py-3.5 pl-11 pr-4 text-sm shadow-lift ring-1 ring-navy/[0.04] transition-all focus:border-ocean focus:outline-none focus:ring-4 focus:ring-ocean/20" />
+                className="w-full rounded-2xl border border-white/80 bg-white py-3.5 pl-11 pr-11 text-sm [&::-webkit-search-cancel-button]:hidden shadow-lift ring-1 ring-navy/[0.04] transition-all focus:border-ocean focus:outline-none focus:ring-4 focus:ring-ocean/20" />
+              {searchInput && (
+                <button type="button" aria-label="Clear search" onClick={() => { setSearchInput(''); updateParams('search', ''); }}
+                  className="absolute right-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
-            <button type="button" onClick={() => setShowFilters(!showFilters)}
+            <button type="button" aria-expanded={showFilters} onClick={() => setShowFilters(!showFilters)}
               className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl border px-5 py-3.5 text-sm font-semibold shadow-lift ring-1 ring-navy/[0.04] transition-all ${showFilters || hasFilters ? 'border-ocean bg-gradient-to-br from-ocean/10 to-plum/5 text-ocean' : 'border-white/80 bg-white text-gray-600 hover:text-ocean'}`}>
               <SlidersHorizontal className="h-4 w-4" /> Filters
               {hasFilters && <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ocean text-[10px] font-bold text-white">{[search, department, type].filter(Boolean).length}</span>}
@@ -163,25 +193,56 @@ function JobsContent() {
             </motion.div>
           )}
 
+          {/* Active filter chips + result count */}
+          {(hasFilters || (!loading && !error)) && (
+            <div className="mt-5 flex flex-wrap items-center gap-2" aria-live="polite">
+              {!loading && !error && (
+                <span className="mr-1 text-sm font-medium text-gray-600">
+                  {pagination.total} {pagination.total === 1 ? 'position' : 'positions'}
+                </span>
+              )}
+              {[
+                search && { label: `“${search}”`, clear: () => { setSearchInput(''); updateParams('search', ''); } },
+                activeDepartment && { label: activeDepartment, clear: () => updateParams('department', '') },
+                type && typeLabel && { label: typeLabel, clear: () => updateParams('type', '') },
+              ].filter(Boolean).map((chip) => {
+                const c = chip as { label: string; clear: () => void };
+                return (
+                  <button key={c.label} type="button" onClick={c.clear} aria-label={`Remove filter ${c.label}`}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-ocean/20 bg-white px-3 py-1.5 text-xs font-semibold text-ocean shadow-sm transition-colors hover:bg-ocean/5">
+                    {c.label} <X className="h-3 w-3" />
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {/* Results */}
           {loading ? (
-            <div className="flex justify-center py-20"><Spinner size="lg" /></div>
-          ) : jobs.length === 0 ? (
-            <div className="py-20 text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-100"><Briefcase className="h-8 w-8 text-gray-300" /></div>
-              <h3 className="mt-5 text-lg font-bold text-gray-900">No positions found</h3>
-              <p className="mt-1.5 text-sm text-gray-500">Try adjusting your search or filters</p>
-              {hasFilters && (
-                <button onClick={clearFilters} className="mt-4 text-sm font-semibold text-ocean hover:text-navy transition-colors">Clear all filters</button>
-              )}
+            <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">
+              {Array.from({ length: 6 }, (_, i) => <JobCardSkeleton key={i} />)}
             </div>
+          ) : error ? (
+            <EmptyState
+              icon={AlertCircle}
+              title="We couldn't load the openings"
+              description="Please check your connection and try again."
+              action={<button onClick={fetchJobs} className="rounded-xl bg-navy px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:bg-ocean">Try again</button>}
+            />
+          ) : jobs.length === 0 ? (
+            <EmptyState
+              icon={Briefcase}
+              title="No positions found"
+              description="Try a different keyword or remove a filter."
+              action={hasFilters ? <button onClick={clearFilters} className="text-sm font-semibold text-ocean transition-colors hover:text-navy">Clear all filters</button> : undefined}
+            />
           ) : (
             <>
-              <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {jobs.map((job, i) => {
                   const t = cardThemes[i % cardThemes.length];
                   return (
-                    <Link key={job._id} href={`/jobs/${job.slug}`} className="min-w-0">
+                    <Link key={job._id} href={`/jobs/${job.slug}`} className="min-w-0 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ocean focus-visible:ring-offset-2">
                       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
                         className={`group accent-sweep flex h-full min-w-0 flex-col rounded-2xl border border-white/70 bg-gradient-to-br from-white ${t.tint} p-6 shadow-lift ring-1 ring-navy/[0.04] transition-all hover:shadow-glow hover:-translate-y-1`}>
                         <div className="flex items-start justify-between gap-2">
@@ -214,7 +275,7 @@ function JobsContent() {
               {/* Pagination */}
               {pagination.pages > 1 && (
                 <div className="mt-10 flex flex-wrap items-center justify-center gap-2">
-                  <button onClick={() => updateParams('page', String(page - 1))} disabled={page <= 1}
+                  <button aria-label="Previous page" onClick={() => updateParams('page', String(page - 1))} disabled={page <= 1}
                     className="inline-flex items-center gap-1 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors shadow-sm sm:px-4">
                     <ChevronLeft className="h-4 w-4" /> <span className="hidden sm:inline">Prev</span>
                   </button>
@@ -229,13 +290,13 @@ function JobsContent() {
                       typeof p === 'string' ? (
                         <span key={`e-${i}`} className="px-1 text-gray-400">...</span>
                       ) : (
-                        <button key={p} onClick={() => updateParams('page', String(p))}
+                        <button key={p} aria-label={`Page ${p}`} aria-current={p === page ? 'page' : undefined} onClick={() => updateParams('page', String(p))}
                           className={`h-10 min-w-10 rounded-xl px-2 text-sm font-semibold transition-all shadow-sm ${p === page ? 'bg-gradient-to-br from-navy to-ocean text-white shadow-md' : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}>
                           {p}
                         </button>
                       )
                     )}
-                  <button onClick={() => updateParams('page', String(page + 1))} disabled={page >= pagination.pages}
+                  <button aria-label="Next page" onClick={() => updateParams('page', String(page + 1))} disabled={page >= pagination.pages}
                     className="inline-flex items-center gap-1 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors shadow-sm sm:px-4">
                     <span className="hidden sm:inline">Next</span> <ChevronRight className="h-4 w-4" />
                   </button>

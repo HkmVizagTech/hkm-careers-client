@@ -34,6 +34,9 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Spinner } from '@/components/ui/Spinner';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { toast } from '@/lib/toast';
+
 import { formatDate } from '@/lib/utils';
 import type { Application } from '@/types';
 
@@ -83,7 +86,7 @@ export default function ApplicationDetailPage() {
       setApp({ ...app, status: updated.status });
       setStatusConfirm(null);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to update status');
+      toast.error(err instanceof Error ? err.message : 'Failed to update status');
     }
   };
 
@@ -91,17 +94,17 @@ export default function ApplicationDetailPage() {
     if (!app || !noteText.trim()) return;
     setAddingNote(true);
     try { const updated = await addApplicationNote(app._id, noteText); setApp({ ...app, notes: updated.notes }); setNoteText(''); }
-    catch (err: unknown) { alert(err instanceof Error ? err.message : 'Failed to add note'); }
+    catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to add note'); }
     finally { setAddingNote(false); }
   };
 
   const handleDelete = async () => {
     if (!app) return;
     try { await deleteApplication(app._id); router.push('/admin/applications'); }
-    catch (err: unknown) { alert(err instanceof Error ? err.message : 'Failed to delete'); }
+    catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to delete'); }
   };
 
-  if (loading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
+  if (loading) return <div className="mt-6 space-y-3" aria-busy="true">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-20" />)}</div>;
 
   if (!app) return (
     <div className="py-20 text-center">
@@ -120,7 +123,7 @@ export default function ApplicationDetailPage() {
       </Link>
 
       {/* Header */}
-      <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div className="mt-6 rounded-2xl border border-hairline bg-white p-6 shadow-soft">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-navy to-ocean text-lg font-bold text-white shadow-lg shadow-navy/20">
@@ -159,7 +162,7 @@ export default function ApplicationDetailPage() {
         <div className="space-y-6 lg:col-span-2">
           {/* Resume */}
           {app.resumeUrl && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-hairline bg-white p-6 shadow-soft">
               <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
                 <FileText className="h-5 w-5 text-ocean" /> Resume
               </h2>
@@ -172,7 +175,7 @@ export default function ApplicationDetailPage() {
 
           {/* Experience */}
           {app.isExperienced && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-hairline bg-white p-6 shadow-soft">
               <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
                 <Briefcase className="h-5 w-5 text-ocean" /> Work Experience
               </h2>
@@ -207,7 +210,7 @@ export default function ApplicationDetailPage() {
 
           {/* Personal Details */}
           {(app.location || app.gender || app.dateOfBirth) && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-hairline bg-white p-6 shadow-soft">
               <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
                 <User className="h-5 w-5 text-ocean" /> Personal Details
               </h2>
@@ -248,7 +251,7 @@ export default function ApplicationDetailPage() {
 
           {/* Educational Details */}
           {(app.highestDegree || app.collegeName) && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-hairline bg-white p-6 shadow-soft">
               <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
                 <Building2 className="h-5 w-5 text-ocean" /> Educational Details
               </h2>
@@ -283,7 +286,7 @@ export default function ApplicationDetailPage() {
 
           {/* Online Profiles */}
           {(app.linkedinUrl || app.githubUrl || app.portfolioUrl) && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-hairline bg-white p-6 shadow-soft">
               <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
                 <Globe className="h-5 w-5 text-ocean" /> Online Profiles
               </h2>
@@ -312,14 +315,14 @@ export default function ApplicationDetailPage() {
 
           {/* Cover Letter */}
           {app.coverLetter && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-hairline bg-white p-6 shadow-soft">
               <h2 className="text-base font-bold text-gray-900">Cover Letter</h2>
               <div className="mt-3 whitespace-pre-line rounded-xl bg-background p-4 text-sm text-gray-600 leading-relaxed">{app.coverLetter}</div>
             </motion.div>
           )}
 
           {/* Notes */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="rounded-2xl border border-hairline bg-white p-6 shadow-soft">
             <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
               <MessageSquare className="h-5 w-5 text-ocean" /> Internal Notes
             </h2>
@@ -339,7 +342,7 @@ export default function ApplicationDetailPage() {
               <input type="text" placeholder="Add a note..." value={noteText}
                 onChange={(e) => setNoteText(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddNote()}
-                className="flex-1 rounded-xl border border-gray-200 bg-background px-4 py-2.5 text-sm focus:border-ocean focus:outline-none focus:ring-2 focus:ring-ocean/20" />
+                className="flex-1 rounded-xl border border-gray-200 bg-background px-4 py-2.5 text-sm focus:border-ocean focus:outline-none focus:ring-4 focus:ring-ocean/15" />
               <Button onClick={handleAddNote} loading={addingNote} disabled={!noteText.trim()}>Add</Button>
             </div>
           </motion.div>
@@ -348,7 +351,7 @@ export default function ApplicationDetailPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Status Update */}
-          <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} className="rounded-2xl border border-hairline bg-white p-6 shadow-soft">
             <h2 className="text-base font-bold text-gray-900">Update Status</h2>
             <div className="mt-3 space-y-1.5">
               {statuses.map((s) => (
@@ -362,7 +365,7 @@ export default function ApplicationDetailPage() {
           </motion.div>
 
           {/* Actions */}
-          <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-hairline bg-white p-6 shadow-soft">
             <h2 className="text-base font-bold text-gray-900">Actions</h2>
             <div className="mt-3 space-y-2">
               {app.resumeUrl && (

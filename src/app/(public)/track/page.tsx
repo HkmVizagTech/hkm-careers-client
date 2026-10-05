@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { trackApplication } from '@/lib/services';
 import { Button } from '@/components/ui/Button';
-import { Spinner } from '@/components/ui/Spinner';
+import { Skeleton } from '@/components/ui/Skeleton';
 import Link from 'next/link';
 
 type TrackedApplication = {
@@ -127,7 +127,7 @@ export default function TrackPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl shadow-navy/10"
+            className="overflow-hidden rounded-2xl border border-hairline bg-white shadow-lift"
           >
             <div className="h-1.5 bg-gradient-to-r from-navy via-ocean to-cyan" />
             <div className="p-6 sm:p-8">
@@ -137,7 +137,7 @@ export default function TrackPage() {
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-navy">Find Your Application</h2>
-                  <p className="text-sm text-gray-400">Paste your application reference ID below</p>
+                  <p className="text-sm text-gray-500">Paste your application reference ID below</p>
                 </div>
               </div>
               <form onSubmit={handleTrack} className="flex flex-col gap-4 sm:flex-row">
@@ -147,11 +147,16 @@ export default function TrackPage() {
                     type="text"
                     value={applicationId}
                     onChange={(e) => setApplicationId(e.target.value)}
+                    aria-label="Application ID"
+                    autoComplete="off"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    enterKeyHint="search"
                     placeholder="Enter Application ID (e.g. 6651a3f...)"
-                    className="w-full rounded-xl border border-gray-300 bg-white py-3.5 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean"
+                    className="w-full rounded-xl border border-gray-200 bg-white py-3.5 pl-10 pr-4 text-base shadow-sm transition-all hover:border-gray-300 focus:border-ocean focus:outline-none focus:ring-4 focus:ring-ocean/15 sm:text-sm"
                   />
                 </div>
-                <Button type="submit" loading={loading} size="lg" className="shrink-0">
+                <Button type="submit" loading={loading} disabled={!applicationId.trim()} size="lg" className="shrink-0">
                   <Search className="h-4 w-4" />
                   Track
                 </Button>
@@ -163,8 +168,11 @@ export default function TrackPage() {
         {/* Loading / Error / Result — auto-scrolled to after each search */}
         <div ref={resultsRef} className="scroll-mt-28">
           {loading && (
-            <div className="mx-auto mt-12 flex justify-center">
-              <Spinner size="lg" />
+            <div className="mx-auto mt-10 max-w-3xl space-y-4 px-4 sm:px-6 lg:px-8" aria-busy="true" role="status">
+              <span className="sr-only">Looking up your application…</span>
+              <Skeleton className="h-24" />
+              <Skeleton className="h-16" />
+              <Skeleton className="h-32" />
             </div>
           )}
 
@@ -176,13 +184,13 @@ export default function TrackPage() {
             transition={{ duration: 0.4 }}
             className="mx-auto mt-10 max-w-2xl px-4 sm:px-6 lg:px-8"
           >
-            <div className="rounded-2xl border border-red-200 bg-gradient-to-br from-red-50 to-red-50/50 p-8 text-center">
+            <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
                 <XCircle className="h-8 w-8 text-red-500" />
               </div>
               <h3 className="mt-4 text-lg font-bold text-gray-900">Application Not Found</h3>
               <p className="mt-2 text-sm text-gray-500 leading-relaxed">{error}</p>
-              <p className="mt-4 text-xs text-gray-400">
+              <p className="mt-4 text-xs text-gray-500">
                 Make sure you&apos;re using the exact ID you received after submitting your application.
               </p>
             </div>
@@ -197,7 +205,7 @@ export default function TrackPage() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="mx-auto mt-10 max-w-3xl px-4 sm:px-6 lg:px-8"
           >
-            <div className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-2xl shadow-navy/10">
+            <div className="overflow-hidden rounded-3xl border border-hairline bg-white shadow-xl shadow-navy/10">
               {/* Top gradient bar */}
               <div className={`h-2 ${isRejected ? 'bg-gradient-to-r from-red-400 to-red-500' : 'bg-gradient-to-r from-navy via-ocean to-cyan'}`} />
 
@@ -210,13 +218,13 @@ export default function TrackPage() {
                     </div>
                     <div>
                       <h3 className="text-xl font-bold text-navy">{result.name}</h3>
-                      <div className="mt-1 flex items-center gap-1.5 text-sm text-gray-400">
+                      <div className="mt-1 flex items-center gap-1.5 break-all text-sm text-gray-500">
                         <Mail className="h-3.5 w-3.5" />
                         {result.email}
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 rounded-xl bg-gray-50 px-4 py-2.5 border border-gray-200">
+                  <div className="flex items-center gap-2 self-start rounded-xl bg-surfaceAlt px-4 py-2.5">
                     <Calendar className="h-4 w-4 text-gray-400" />
                     <div>
                       <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Applied</p>
@@ -233,7 +241,7 @@ export default function TrackPage() {
 
                 {/* Job Info */}
                 {result.job && (
-                  <div className="mt-6 rounded-2xl border border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100/50 p-5">
+                  <div className="mt-6 border-l-2 border-ocean/30 pl-4">
                     <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-2">Position Applied For</p>
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex items-center gap-3">
@@ -243,11 +251,11 @@ export default function TrackPage() {
                         <h4 className="text-lg font-bold text-navy">{result.job.title}</h4>
                       </div>
                       <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
-                        <span className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 border border-gray-200 shadow-sm">
+                        <span className="inline-flex items-center gap-1.5 rounded-lg bg-surfaceAlt px-3 py-1.5">
                           <MapPin className="h-3.5 w-3.5 text-ocean" />
                           {result.job.location}
                         </span>
-                        <span className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 border border-gray-200 shadow-sm">
+                        <span className="inline-flex items-center gap-1.5 rounded-lg bg-surfaceAlt px-3 py-1.5">
                           <Clock className="h-3.5 w-3.5 text-ocean" />
                           {result.job.type}
                         </span>
@@ -270,7 +278,7 @@ export default function TrackPage() {
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.3, delay: 0.2 }}
-                    className="rounded-2xl border border-red-200 bg-gradient-to-br from-red-50 to-red-50/50 p-6 text-center"
+                    className="rounded-2xl bg-red-50 p-6 text-center"
                   >
                     <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
                       <XCircle className="h-8 w-8 text-red-500" />
@@ -458,7 +466,7 @@ export default function TrackPage() {
                 <FileSearch className="h-8 w-8 text-ocean/50" />
               </div>
             </div>
-            <p className="mt-4 text-sm text-gray-400 leading-relaxed">
+            <p className="mt-4 text-sm text-gray-500 leading-relaxed">
               Your Application ID was provided when you submitted your application.
               Check your confirmation page, email, or WhatsApp message for the reference number.
             </p>

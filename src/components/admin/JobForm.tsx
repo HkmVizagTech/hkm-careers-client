@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import { createJob, updateJob } from '@/lib/services';
 import type { Job, Department } from '@/types';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { toast } from '@/lib/toast';
 
 const typeLabels: Record<string, string> = {
   'full-time': 'Full Time',
@@ -103,7 +105,7 @@ function PointRows({
               value={item}
               onChange={(e) => update(i, e.target.value)}
               placeholder={placeholder}
-              className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm transition-all focus:border-ocean focus:bg-white focus:outline-none focus:ring-2 focus:ring-ocean/20"
+              className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm transition-all focus:border-ocean focus:bg-white focus:outline-none focus:ring-4 focus:ring-ocean/15"
             />
             {points.length > 1 && (
               <button
@@ -216,7 +218,7 @@ export default function JobForm({
   };
 
   const inputClass = (key: string) =>
-    `w-full rounded-xl border bg-gray-50 px-4 py-2.5 text-sm transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-ocean/20 ${
+    `w-full rounded-xl border bg-gray-50 px-4 py-2.5 text-sm transition-all focus:bg-white focus:outline-none focus:ring-4 focus:ring-ocean/15 ${
       fieldErrors[key] ? 'border-red-400 bg-red-50/40 focus:border-red-400' : 'border-gray-200 focus:border-ocean'
     }`;
 
@@ -233,7 +235,7 @@ export default function JobForm({
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold text-navy">
               {isEdit ? 'Edit Job' : 'Create Job'}
             </h1>
             <p className="mt-0.5 text-sm text-gray-500">
@@ -265,7 +267,7 @@ export default function JobForm({
         {/* Form column */}
         <div className="space-y-6 lg:col-span-2">
           {/* Section: The Basics */}
-          <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+          <section className="rounded-2xl border border-hairline bg-white p-5 shadow-soft sm:p-6">
             <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-navy to-ocean text-xs font-bold text-white">1</span>
               The Basics
@@ -367,7 +369,7 @@ export default function JobForm({
           </section>
 
           {/* Section: Description */}
-          <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+          <section className="rounded-2xl border border-hairline bg-white p-5 shadow-soft sm:p-6">
             <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-ocean to-cyan text-xs font-bold text-white">2</span>
               Role Details
@@ -401,7 +403,7 @@ export default function JobForm({
           </section>
 
           {/* Section: Requirements & Visibility */}
-          <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+          <section className="rounded-2xl border border-hairline bg-white p-5 shadow-soft sm:p-6">
             <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-gold to-goldDeep text-xs font-bold text-white">3</span>
               Application Settings
@@ -509,7 +511,7 @@ export default function JobForm({
         <div className="lg:col-span-1">
           <div className="lg:sticky lg:top-6">
             {/* Summary card (always visible on desktop) */}
-            <div className={`rounded-2xl border border-gray-200 bg-white p-5 shadow-sm ${showPreview ? '' : 'hidden lg:block'}`}>
+            <div className={`rounded-2xl border border-hairline bg-white p-5 shadow-soft ${showPreview ? '' : 'hidden lg:block'}`}>
               <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-gray-500">
                 <Info className="h-4 w-4 text-ocean" />
                 Live Preview

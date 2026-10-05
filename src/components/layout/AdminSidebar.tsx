@@ -34,15 +34,18 @@ function SidebarContent({ pathname, onNavigate }: { pathname: string; onNavigate
   };
 
   return (
-    <div className="flex h-full flex-col" style={{ backgroundColor: '#052057' }}>
+    <div className="flex h-full flex-col bg-gradient-to-b from-navy via-navy to-[#0a2d6e]">
       {/* Logo */}
       <div className="flex items-center justify-between px-6 py-5">
-        <img src="https://pub-4e0da5167b73428c8f43c54f8376882d.r2.dev/logo/hkm%20logo%20png%20sp%20colored%20-%20black%20font.png" alt="HKM Admin" className="h-9 w-auto brightness-0 invert" />
+        <div className="flex items-center gap-3">
+          <img src="https://pub-4e0da5167b73428c8f43c54f8376882d.r2.dev/logo/hkm%20logo%20png%20sp%20colored%20-%20black%20font.png" alt="HKM Admin" className="h-9 w-auto rounded-lg bg-white p-1" />
+          <span className="text-[11px] font-bold uppercase tracking-widest text-cyan">Careers Admin</span>
+        </div>
         {onNavigate && (
           <button
             type="button"
             onClick={onNavigate}
-            className="rounded-lg p-1 text-white/60 transition-colors hover:bg-white/10 hover:text-white lg:hidden"
+            className="rounded-lg p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white lg:hidden"
             aria-label="Close sidebar"
           >
             <X className="h-5 w-5" />
@@ -52,7 +55,7 @@ function SidebarContent({ pathname, onNavigate }: { pathname: string; onNavigate
       <div className="mx-4 border-t border-white/15" />
 
       {/* Navigation */}
-      <nav className="mt-4 flex-1 space-y-1 px-3">
+      <nav aria-label="Admin navigation" className="mt-4 flex-1 space-y-1 px-3">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.href);
@@ -63,13 +66,20 @@ function SidebarContent({ pathname, onNavigate }: { pathname: string; onNavigate
               href={item.href}
               onClick={onNavigate}
               className={cn(
-                'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
+                'group relative flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-all',
                 active
-                  ? 'border-l-[3px] border-[#2bcdee] bg-[#0f618a] text-white'
-                  : 'border-l-[3px] border-transparent text-white/70 hover:bg-white/5 hover:text-white'
+                  ? 'bg-white/15 text-white shadow-inner'
+                  : 'text-white/70 hover:bg-white/10 hover:text-white'
               )}
             >
-              <Icon className={cn('h-5 w-5 shrink-0', active ? 'text-white' : 'text-white/60 group-hover:text-white')} />
+              {active && (
+                <motion.span
+                  layoutId="admin-active-bar"
+                  className="absolute inset-y-2 left-0 w-1 rounded-full bg-gradient-to-b from-cyan to-gold"
+                  transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                />
+              )}
+              <Icon className={cn('h-5 w-5 shrink-0', active ? 'text-cyan' : 'text-white/60 group-hover:text-white')} />
               {item.label}
             </Link>
           );
@@ -81,7 +91,7 @@ function SidebarContent({ pathname, onNavigate }: { pathname: string; onNavigate
         <Link
           href="/"
           onClick={onNavigate}
-          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/60 transition-colors hover:bg-white/5 hover:text-white"
+          className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white"
         >
           <ExternalLink className="h-5 w-5 shrink-0" />
           Back to Site
@@ -112,7 +122,7 @@ export default function AdminSidebar({ isOpen, onToggle }: AdminSidebarProps) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+              className="fixed inset-0 z-40 bg-navy/60 backdrop-blur-sm lg:hidden"
               onClick={onToggle}
               aria-hidden="true"
             />

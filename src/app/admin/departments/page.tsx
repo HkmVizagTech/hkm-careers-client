@@ -12,6 +12,9 @@ import {
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Spinner } from '@/components/ui/Spinner';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { toast } from '@/lib/toast';
+
 import { formatDate } from '@/lib/utils';
 import type { Department } from '@/types';
 
@@ -50,14 +53,14 @@ export default function DepartmentsPage() {
 
   const handleDelete = async (id: string) => {
     try { await deleteDepartment(id); setDeleteConfirm(null); load(); }
-    catch (err: unknown) { alert(err instanceof Error ? err.message : 'Failed to delete'); }
+    catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to delete'); }
   };
 
   return (
     <div>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Departments</h1>
+          <h1 className="text-2xl font-bold text-navy">Departments</h1>
           <p className="mt-1 text-sm text-gray-500">Manage organizational departments</p>
         </div>
         <button onClick={openCreate}
@@ -67,9 +70,9 @@ export default function DepartmentsPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20"><Spinner size="lg" /></div>
+        <div className="mt-6 space-y-3" aria-busy="true">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-20" />)}</div>
       ) : departments.length === 0 ? (
-        <div className="mt-6 rounded-2xl border border-dashed border-gray-300 bg-white py-16 text-center">
+        <div className="mt-6 rounded-2xl border border-dashed border-ocean/25 bg-white py-16 text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-100"><Building2 className="h-8 w-8 text-gray-300" /></div>
           <p className="mt-4 text-base font-bold text-gray-900">No departments yet</p>
           <p className="mt-1 text-sm text-gray-500">Create your first department to organize job postings.</p>
@@ -81,7 +84,7 @@ export default function DepartmentsPage() {
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {departments.map((dept, i) => (
               <motion.div key={dept._id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                className="group rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:shadow-lg hover:-translate-y-0.5">
+                className="group rounded-2xl border border-hairline bg-white p-5 shadow-soft transition-all hover:shadow-lg hover:-translate-y-0.5">
                 <div className="flex items-start justify-between">
                   <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${deptColors[i % deptColors.length]} text-white shadow-md`}>
                     <Building2 className="h-5 w-5" />
@@ -108,10 +111,10 @@ export default function DepartmentsPage() {
           </div>
 
           {/* Table fallback */}
-          <div className="mt-6 hidden overflow-hidden rounded-2xl border border-gray-200 bg-white lg:block">
+          <div className="mt-6 hidden overflow-hidden rounded-2xl border border-hairline bg-white shadow-soft lg:block">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50/80">
+                <tr className="border-b border-hairline bg-surfaceAlt/70">
                   <th className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500">Name</th>
                   <th className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500">Description</th>
                   <th className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500">Status</th>
@@ -121,7 +124,7 @@ export default function DepartmentsPage() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {departments.map((dept, i) => (
-                  <motion.tr key={dept._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }} className="hover:bg-gray-50/50 transition-colors">
+                  <motion.tr key={dept._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }} className="hover:bg-ocean/[0.04] transition-colors">
                     <td className="px-5 py-4 font-semibold text-gray-900">{dept.name}</td>
                     <td className="max-w-xs truncate px-5 py-4 text-gray-500">{dept.description || '—'}</td>
                     <td className="px-5 py-4">
@@ -151,12 +154,12 @@ export default function DepartmentsPage() {
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-gray-500 uppercase tracking-wider">Department Name</label>
             <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Kitchen, Education, Media"
-              className="w-full rounded-xl border border-gray-200 bg-background px-4 py-2.5 text-sm focus:border-ocean focus:outline-none focus:ring-2 focus:ring-ocean/20" />
+              className="w-full rounded-xl border border-gray-200 bg-background px-4 py-2.5 text-sm focus:border-ocean focus:outline-none focus:ring-4 focus:ring-ocean/15" />
           </div>
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-gray-500 uppercase tracking-wider">Description (optional)</label>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description of the department..." rows={3}
-              className="w-full rounded-xl border border-gray-200 bg-background px-4 py-2.5 text-sm focus:border-ocean focus:outline-none focus:ring-2 focus:ring-ocean/20 resize-none" />
+              className="w-full rounded-xl border border-gray-200 bg-background px-4 py-2.5 text-sm focus:border-ocean focus:outline-none focus:ring-4 focus:ring-ocean/15 resize-none" />
           </div>
           <div className="flex justify-end gap-3 border-t border-gray-100 pt-4">
             <Button variant="ghost" onClick={() => setModalOpen(false)}>Cancel</Button>

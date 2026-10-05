@@ -35,7 +35,7 @@ const config: Config = {
         glow: "0 0 0 1px rgba(43, 205, 238, 0.2), 0 8px 32px -8px rgba(15, 97, 138, 0.35)",
       },
       fontFamily: {
-        sans: ["Poppins", "system-ui", "sans-serif"],
+        sans: ["var(--font-poppins)", "Poppins", "system-ui", "sans-serif"],
       },
       borderRadius: {
         DEFAULT: "0.75rem",

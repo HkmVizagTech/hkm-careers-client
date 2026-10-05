@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import BackToTop from '@/components/layout/BackToTop';
 import { Mail, Globe, MapPin, Phone, ArrowUpRight, Navigation } from 'lucide-react';
 
 const footerLinks = {
@@ -29,7 +30,8 @@ const ADDRESS = {
 
 export default function Footer() {
   return (
-    <footer className="border-t border-gray-200 bg-gradient-to-b from-white to-gray-50">
+    <footer className="relative border-t border-hairline bg-gradient-to-b from-white to-surfaceAlt">
+      <div className="h-1 bg-gradient-to-r from-navy via-ocean via-40% to-gold" aria-hidden="true" />
       <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           <div className="sm:col-span-2 lg:col-span-2">
@@ -56,7 +58,7 @@ export default function Footer() {
             </p>
 
             {/* Address card */}
-            <div className="mt-6 max-w-md rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="mt-6 max-w-md border-l-2 border-ocean/30 pl-4">
               <div className="flex items-start gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-navy to-ocean text-white shadow-md shadow-navy/20">
                   <MapPin className="h-5 w-5" />
@@ -82,7 +84,7 @@ export default function Footer() {
                       href={ADDRESS.mapsUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-navy/5 px-3.5 py-2 text-xs font-semibold text-navy transition-all hover:bg-navy/10"
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-navy/5 px-3.5 py-2.5 text-xs font-semibold text-navy transition-all hover:bg-navy/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-ocean"
                     >
                       <Navigation className="h-3.5 w-3.5" />
                       Get Directions
@@ -97,13 +99,15 @@ export default function Footer() {
                 href="https://harekrishnavizag.org"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-all duration-300 hover:scale-110 hover:bg-ocean/10 hover:text-ocean"
+                aria-label="Visit our main website"
+                className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-gray-500 shadow-sm ring-1 ring-hairline transition-all duration-300 hover:-translate-y-0.5 hover:bg-ocean/10 hover:text-ocean focus:outline-none focus-visible:ring-2 focus-visible:ring-ocean"
               >
                 <Globe className="h-4 w-4" />
               </a>
               <a
                 href="mailto:careers@harekrishnavizag.org"
-                className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-400 transition-all duration-300 hover:scale-110 hover:bg-ocean/10 hover:text-ocean"
+                aria-label="Email our careers team"
+                className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-gray-500 shadow-sm ring-1 ring-hairline transition-all duration-300 hover:-translate-y-0.5 hover:bg-ocean/10 hover:text-ocean focus:outline-none focus-visible:ring-2 focus-visible:ring-ocean"
               >
                 <Mail className="h-4 w-4" />
               </a>
@@ -117,7 +121,7 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="group inline-flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-ocean"
+                    className="group inline-flex items-center gap-1.5 py-1 text-sm text-gray-600 transition-colors hover:text-ocean"
                   >
                     {link.label}
                     <ArrowUpRight className="h-3 w-3 opacity-0 transition-all group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:opacity-100" />
@@ -140,7 +144,7 @@ export default function Footer() {
                 referrerPolicy="no-referrer-when-downgrade"
               />
             </div>
-            <p className="mt-3 flex items-start gap-1.5 text-xs leading-relaxed text-gray-400">
+            <p className="mt-3 flex items-start gap-1.5 text-xs leading-relaxed text-gray-500">
               <MapPin className="mt-0.5 h-3 w-3 shrink-0" />
               Gambhiram, Visakhapatnam — near Akshaya Patra Foundation
             </p>
@@ -148,14 +152,15 @@ export default function Footer() {
         </div>
 
         <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-gray-200/80 pt-7 sm:flex-row">
-          <p className="text-center text-xs text-gray-400">
+          <p className="text-center text-xs text-gray-500">
             &copy; {new Date().getFullYear()} Hare Krishna Movement Vizag. All rights reserved.
           </p>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-gray-500">
             Serving humanity through spiritual wisdom &amp; compassion.
           </p>
         </div>
       </div>
+      <BackToTop />
     </footer>
   );
 }

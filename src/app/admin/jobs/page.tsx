@@ -17,6 +17,9 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Spinner } from '@/components/ui/Spinner';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { toast } from '@/lib/toast';
+
 import { formatDate } from '@/lib/utils';
 import type { Job, Department } from '@/types';
 
@@ -49,7 +52,7 @@ export default function AdminJobsPage() {
   const handleDelete = async (id: string) => {
     setDeleting(true);
     try { await deleteJob(id); setDeleteConfirm(null); loadData(); }
-    catch (err: unknown) { alert(err instanceof Error ? err.message : 'Failed to delete'); }
+    catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to delete'); }
     finally { setDeleting(false); }
   };
 
@@ -59,7 +62,7 @@ export default function AdminJobsPage() {
     <div className="mx-auto max-w-6xl">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Jobs</h1>
+          <h1 className="text-2xl font-bold text-navy">Jobs</h1>
           <p className="mt-1 text-sm text-gray-500">{jobs.length} posting{jobs.length !== 1 ? 's' : ''} · manage listings</p>
         </div>
         <Link
@@ -74,10 +77,10 @@ export default function AdminJobsPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input type="text" placeholder="Search jobs..." value={search} onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-ocean focus:outline-none focus:ring-2 focus:ring-ocean/20" />
+            className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-ocean focus:outline-none focus:ring-4 focus:ring-ocean/15" />
         </div>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:border-ocean focus:outline-none focus:ring-2 focus:ring-ocean/20">
+          className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:border-ocean focus:outline-none focus:ring-4 focus:ring-ocean/15">
           <option value="">All Statuses</option>
           <option value="draft">Draft</option>
           <option value="active">Active</option>
@@ -86,9 +89,9 @@ export default function AdminJobsPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20"><Spinner size="lg" /></div>
+        <div className="mt-6 space-y-3" aria-busy="true">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-20" />)}</div>
       ) : jobs.length === 0 ? (
-        <div className="mt-6 rounded-2xl border border-dashed border-gray-300 bg-white py-16 text-center">
+        <div className="mt-6 rounded-2xl border border-dashed border-ocean/25 bg-white py-16 text-center">
           <Briefcase className="mx-auto h-12 w-12 text-gray-300" />
           <p className="mt-4 text-base font-medium text-gray-900">No jobs found</p>
           <p className="mt-1 text-sm text-gray-500">Create your first job posting to start receiving applications.</p>
@@ -104,7 +107,7 @@ export default function AdminJobsPage() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.03 }}
-              className="group flex flex-col rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:border-ocean/40 hover:shadow-md"
+              className="group flex flex-col rounded-2xl border border-hairline bg-white p-5 shadow-soft transition-all hover:border-ocean/40 hover:shadow-md"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-start gap-3">
@@ -138,19 +141,19 @@ export default function AdminJobsPage() {
               <div className="mt-4 flex items-center justify-end gap-1.5 border-t border-gray-100 pt-3">
                 <Link
                   href={`/jobs/${job.slug}`}
-                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-navy"
+                  className="rounded-lg px-3 py-2 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-navy"
                 >
                   View public page
                 </Link>
                 <Link
                   href={`/admin/jobs/${job._id}/edit`}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-navy/5 px-3.5 py-1.5 text-xs font-semibold text-navy transition-colors hover:bg-navy/10"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-navy/5 px-3.5 py-2 text-xs font-semibold text-navy transition-colors hover:bg-navy/10"
                 >
                   <Edit className="h-3.5 w-3.5" /> Edit
                 </Link>
                 <button
                   onClick={() => setDeleteConfirm(job._id)}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-red-50 px-3.5 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-red-50 px-3.5 py-2 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100"
                 >
                   <Trash2 className="h-3.5 w-3.5" /> Delete
                 </button>

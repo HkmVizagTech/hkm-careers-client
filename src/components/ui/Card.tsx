@@ -32,10 +32,10 @@ function Card({
           : undefined
       }
       className={cn(
-        'rounded-xl border border-gray-200 bg-white shadow-sm',
+        'rounded-2xl border border-hairline bg-white shadow-soft',
         padding && 'p-6',
-        hover && 'transition-shadow duration-200 hover:shadow-lg',
-        onClick && 'cursor-pointer',
+        hover && 'transition-all duration-300 hover:-translate-y-0.5 hover:border-ocean/30 hover:shadow-lift',
+        onClick && 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ocean focus-visible:ring-offset-2',
         className
       )}
     >

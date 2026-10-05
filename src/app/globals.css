@@ -19,6 +19,18 @@ body {
   min-width: 0;
 }
 
+/* Clear, consistent keyboard focus indicator (mouse clicks stay unaffected). */
+:focus-visible {
+  outline: 2px solid #0f618a;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
+
 /* Prevent iOS Safari zooming the page when focusing inputs (<16px). */
 @media (max-width: 640px) {
   input,
@@ -254,6 +266,13 @@ body {
   .animate-shimmer,
   .animate-slide-down {
     animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 
   html {

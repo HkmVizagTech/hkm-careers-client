@@ -7,6 +7,9 @@ import { Search, ExternalLink, FileText, ArrowRight } from 'lucide-react';
 import { getAdminApplications, getAdminJobs, getDepartments } from '@/lib/services';
 import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { toast } from '@/lib/toast';
+
 import { formatDate } from '@/lib/utils';
 import type { Application, Job, Department, PaginationInfo } from '@/types';
 
@@ -48,7 +51,7 @@ export default function ApplicationsPage() {
   return (
     <div>
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Applications</h1>
+        <h1 className="text-2xl font-bold text-navy">Applications</h1>
         <p className="mt-1 text-sm text-gray-500">Review and manage all candidate applications</p>
       </div>
 
@@ -56,18 +59,18 @@ export default function ApplicationsPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <select value={jobFilter} onChange={(e) => { setJobFilter(e.target.value); setPage(1); }}
-            className="w-full appearance-none rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-ocean focus:outline-none focus:ring-2 focus:ring-ocean/20">
+            className="w-full appearance-none rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-ocean focus:outline-none focus:ring-4 focus:ring-ocean/15">
             <option value="">All Jobs</option>
             {jobs.map((j) => <option key={j._id} value={j._id}>{j.title}</option>)}
           </select>
         </div>
         <select value={departmentFilter} onChange={(e) => { setDepartmentFilter(e.target.value); setPage(1); }}
-          className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:border-ocean focus:outline-none focus:ring-2 focus:ring-ocean/20">
+          className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:border-ocean focus:outline-none focus:ring-4 focus:ring-ocean/15">
           <option value="">All Departments</option>
           {departments.map((d) => <option key={d._id} value={d._id}>{d.name}</option>)}
         </select>
         <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-          className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:border-ocean focus:outline-none focus:ring-2 focus:ring-ocean/20">
+          className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:border-ocean focus:outline-none focus:ring-4 focus:ring-ocean/15">
           <option value="">All Statuses</option>
           <option value="received">Received</option>
           <option value="under-review">Under Review</option>
@@ -79,9 +82,9 @@ export default function ApplicationsPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20"><Spinner size="lg" /></div>
+        <div className="mt-6 space-y-3" aria-busy="true">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-20" />)}</div>
       ) : applications.length === 0 ? (
-        <div className="mt-6 rounded-2xl border border-dashed border-gray-300 bg-white py-16 text-center">
+        <div className="mt-6 rounded-2xl border border-dashed border-ocean/25 bg-white py-16 text-center">
           <FileText className="mx-auto h-12 w-12 text-gray-300" />
           <p className="mt-4 text-base font-medium text-gray-900">No applications found</p>
           <p className="mt-1 text-sm text-gray-500">Applications will appear here as candidates apply.</p>
@@ -89,11 +92,11 @@ export default function ApplicationsPage() {
       ) : (
         <>
           <p className="mt-4 text-sm text-gray-500">{pagination.total} application{pagination.total !== 1 ? 's' : ''}</p>
-          <div className="mt-2 overflow-hidden rounded-2xl border border-gray-200 bg-white">
+          <div className="mt-2 overflow-hidden rounded-2xl border border-hairline bg-white shadow-soft">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50/80">
+                  <tr className="border-b border-hairline bg-surfaceAlt/70">
                     <th className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500">Candidate</th>
                     <th className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500">Job</th>
                     <th className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500">Status</th>
@@ -104,7 +107,7 @@ export default function ApplicationsPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {applications.map((app, i) => (
-                    <motion.tr key={app._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }} className="hover:bg-gray-50/50 transition-colors">
+                    <motion.tr key={app._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }} className="hover:bg-ocean/[0.04] transition-colors">
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-navy to-ocean text-xs font-bold text-white">
@@ -112,7 +115,7 @@ export default function ApplicationsPage() {
                           </div>
                           <div>
                             <p className="font-semibold text-gray-900">{app.name}</p>
-                            <p className="text-xs text-gray-400">{app.email}</p>
+                            <p className="text-xs text-gray-500">{app.email}</p>
                           </div>
                         </div>
                       </td>
@@ -143,10 +146,10 @@ export default function ApplicationsPage() {
           {pagination.pages > 1 && (
             <div className="mt-4 flex items-center justify-center gap-2">
               <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}
-                className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors">Previous</button>
+                className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 transition-colors">Previous</button>
               <span className="text-sm text-gray-500">Page {page} of {pagination.pages}</span>
               <button onClick={() => setPage((p) => Math.min(pagination.pages, p + 1))} disabled={page >= pagination.pages}
-                className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors">Next</button>
+                className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 transition-colors">Next</button>
             </div>
           )}
         </>
