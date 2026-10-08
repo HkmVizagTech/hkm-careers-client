@@ -17,7 +17,9 @@ import {
   IndianRupee,
   Clock,
   Users,
+  CalendarDays,
 } from 'lucide-react';
+import { formatDate, toISTDateInput } from '@/lib/utils';
 import { createJob, updateJob } from '@/lib/services';
 import type { Job, Department } from '@/types';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -43,6 +45,8 @@ interface JobFormState {
   status: string;
   askEducationalDetails: boolean;
   targetGender: string;
+  /** YYYY-MM-DD or '' for no deadline */
+  deadline: string;
 }
 
 const emptyForm: JobFormState = {
@@ -58,6 +62,7 @@ const emptyForm: JobFormState = {
   status: 'active',
   askEducationalDetails: false,
   targetGender: 'any',
+  deadline: '',
 };
 
 /** One "point" row used by the repeating bullet inputs. */
@@ -154,6 +159,7 @@ export default function JobForm({
           status: job.status,
           askEducationalDetails: job.askEducationalDetails || false,
           targetGender: job.targetGender || 'any',
+          deadline: job.deadline ? toISTDateInput(job.deadline) : '',
         }
       : emptyForm
   );
@@ -188,6 +194,9 @@ export default function JobForm({
     if (!form.department) errs.department = 'Department is required';
     if (!form.location.trim()) errs.location = 'Location is required';
     if (filledPoints(descriptionPoints).length === 0) errs.description = 'Add at least one description point';
+    if (form.status === 'active' && form.deadline && form.deadline < toISTDateInput(new Date())) {
+      errs.deadline = 'This date has passed. Pick a future date or clear it.';
+    }
     setFieldErrors(errs);
     if (Object.keys(errs).length > 0) {
       setError('Please fix the highlighted fields.');
@@ -353,16 +362,44 @@ export default function JobForm({
                 </div>
               </div>
 
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-gray-700">Salary Range</label>
-                <div className="relative">
-                  <IndianRupee className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                  <input
-                    value={form.salaryRange}
-                    onChange={(e) => set('salaryRange', e.target.value)}
-                    placeholder="e.g. ₹3-5 LPA (optional)"
-                    className={`${inputClass('salaryRange')} pl-10`}
-                  />
+              <div className="grid gap-5 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-gray-700">Salary Range</label>
+                  <div className="relative">
+                    <IndianRupee className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <input
+                      value={form.salaryRange}
+                      onChange={(e) => set('salaryRange', e.target.value)}
+                      placeholder="e.g. ₹3-5 LPA (optional)"
+                      className={`${inputClass('salaryRange')} pl-10`}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="job-deadline" className="mb-1.5 block text-sm font-semibold text-gray-700">Apply By</label>
+                  <div className="relative">
+                    <CalendarDays className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <input
+                      id="job-deadline"
+                      type="date"
+                      value={form.deadline}
+                      min={toISTDateInput(new Date())}
+                      onChange={(e) => set('deadline', e.target.value)}
+                      className={`${inputClass('deadline')} pl-10`}
+                    />
+                  </div>
+                  {fieldErrors.deadline ? (
+                    <p className="mt-1 text-xs text-red-500">{fieldErrors.deadline}</p>
+                  ) : (
+                    <p className="mt-1 text-xs text-gray-400">
+                      Optional. The job closes automatically after this day.{' '}
+                      {form.deadline && (
+                        <button type="button" onClick={() => set('deadline', '')} className="font-semibold text-ocean hover:text-navy">
+                          Clear
+                        </button>
+                      )}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -562,6 +599,10 @@ export default function JobForm({
                   <dd className="font-medium text-gray-700">
                     {form.targetGender === 'any' ? 'Everyone' : form.targetGender === 'male' ? 'Male only' : 'Female only'}
                   </dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-gray-400">Apply by</dt>
+                  <dd className="font-medium text-gray-700">{form.deadline ? formatDate(`${form.deadline}T12:00:00+05:30`) : 'No deadline'}</dd>
                 </div>
                 <div className="flex justify-between gap-3">
                   <dt className="text-gray-400">Education form</dt>

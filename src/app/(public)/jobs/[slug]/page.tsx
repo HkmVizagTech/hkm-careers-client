@@ -24,6 +24,7 @@ import {
   ExternalLink,
   X,
   ArrowRight,
+  CalendarDays,
 } from 'lucide-react';
 import { getPublicJobBySlug } from '@/lib/services';
 import { Badge } from '@/components/ui/Badge';
@@ -436,6 +437,18 @@ export default function JobDetailPage() {
                           Experience
                         </span>
                         <span className="min-w-0 text-right text-sm font-medium text-navy">{job.experience}</span>
+                      </div>
+                    </>
+                  )}
+                  {job.deadline && (
+                    <>
+                      <div className="border-t border-gray-100" />
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="flex shrink-0 items-center gap-2 text-sm text-gray-500">
+                          <CalendarDays className="h-4 w-4 text-gray-400" />
+                          Apply by
+                        </span>
+                        <span className="min-w-0 text-right text-sm font-semibold text-navy">{formatDate(job.deadline)}</span>
                       </div>
                     </>
                   )}

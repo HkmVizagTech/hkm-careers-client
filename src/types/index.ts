@@ -22,6 +22,8 @@ export interface Job {
   status: "draft" | "active" | "closed";
   askEducationalDetails?: boolean;
   targetGender?: 'any' | 'male' | 'female';
+  /** Last day to apply (end of that day, India time). The job closes itself after it. */
+  deadline?: string | null;
   applicationCount: number;
   postedBy: string;
   createdAt: string;
@@ -52,6 +54,60 @@ export interface WhatsAppMessage {
   error?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export type InterviewMode = "in-person" | "phone" | "video";
+
+export interface Interview {
+  scheduledAt: string;
+  mode?: InterviewMode;
+  location?: string;
+  notes?: string;
+}
+
+export interface FollowUp {
+  _id: string;
+  dueAt: string;
+  note: string;
+  done: boolean;
+  notifiedAt?: string | null;
+  createdBy?: { _id: string; name: string } | string;
+  createdAt: string;
+}
+
+export type AdminNotificationType =
+  | "new-application"
+  | "unreviewed"
+  | "interview"
+  | "job-closing"
+  | "job-closed"
+  | "follow-up";
+
+export interface AdminNotification {
+  _id: string;
+  type: AdminNotificationType;
+  title: string;
+  message: string;
+  link?: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface AttentionSummary {
+  unreviewedDays: number;
+  unreviewedCount: number;
+  unreviewed: (Pick<Application, "_id" | "name" | "applicationNumber" | "createdAt"> & { job: { title: string } | null })[];
+  interviews: (Pick<Application, "_id" | "name" | "applicationNumber"> & { interview: Interview; job: { title: string } | null })[];
+  closingJobs: { _id: string; title: string; deadline: string; applicationCount: number }[];
+  followUps: {
+    _id: string;
+    applicationId: string;
+    name: string;
+    applicationNumber?: string;
+    note: string;
+    dueAt: string;
+    overdue: boolean;
+  }[];
 }
 
 export interface Application {
@@ -90,6 +146,8 @@ export interface Application {
     | "rejected";
   notes: ApplicationNote[];
   whatsappMessages?: WhatsAppMessage[];
+  interview?: Interview | null;
+  followUps?: FollowUp[];
   createdAt: string;
   updatedAt: string;
 }

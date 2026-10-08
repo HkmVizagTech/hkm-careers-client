@@ -9,6 +9,10 @@ import type {
   DashboardStats,
   AdminUser,
   AuthUser,
+  AdminNotification,
+  AttentionSummary,
+  Interview,
+  FollowUp,
 } from "@/types";
 
 export async function getPublicJobs(params?: {
@@ -90,6 +94,7 @@ export async function getAdminApplications(params?: {
   job?: string;
   status?: string;
   department?: string;
+  search?: string;
   page?: number;
   limit?: number;
 }): Promise<ApplicationsResponse> {
@@ -196,4 +201,93 @@ export async function deleteAdminUser(id: string): Promise<void> {
 export async function updateMyProfile(name: string): Promise<AuthUser> {
   const { data } = await api.put("/users/me", { name });
   return data.user;
+}
+
+// ---------------------------------------------------------------- admin notifications
+
+export async function getNotifications(limit = 20): Promise<{
+  notifications: AdminNotification[];
+  unreadCount: number;
+}> {
+  const { data } = await api.get("/notifications", { params: { limit } });
+  return data;
+}
+
+export async function getUnreadNotificationCount(): Promise<number> {
+  const { data } = await api.get("/notifications/unread-count");
+  return data.unreadCount;
+}
+
+export async function markNotificationRead(id: string): Promise<void> {
+  await api.post(`/notifications/${id}/read`);
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  await api.post("/notifications/read-all");
+}
+
+export async function getAttentionSummary(): Promise<AttentionSummary> {
+  const { data } = await api.get("/dashboard/attention");
+  return data;
+}
+
+// ---------------------------------------------------------------- interview & follow-ups
+
+export async function scheduleInterview(
+  id: string,
+  interview: { scheduledAt: string; mode?: string; location?: string; notes?: string }
+): Promise<Interview> {
+  const { data } = await api.put(`/applications/${id}/interview`, interview);
+  return data.interview;
+}
+
+export async function clearInterview(id: string): Promise<void> {
+  await api.delete(`/applications/${id}/interview`);
+}
+
+export async function addFollowUp(
+  id: string,
+  input: { dueAt: string; note: string }
+): Promise<FollowUp[]> {
+  const { data } = await api.post(`/applications/${id}/follow-ups`, input);
+  return data.followUps;
+}
+
+export async function updateFollowUp(
+  id: string,
+  followUpId: string,
+  input: { done?: boolean; dueAt?: string }
+): Promise<FollowUp[]> {
+  const { data } = await api.patch(`/applications/${id}/follow-ups/${followUpId}`, input);
+  return data.followUps;
+}
+
+export async function deleteFollowUp(id: string, followUpId: string): Promise<FollowUp[]> {
+  const { data } = await api.delete(`/applications/${id}/follow-ups/${followUpId}`);
+  return data.followUps;
+}
+
+// ---------------------------------------------------------------- export
+
+/** Download the filtered application list as a CSV file (opens in Excel). */
+export async function exportApplicationsCsv(params: {
+  job?: string;
+  status?: string;
+  department?: string;
+  search?: string;
+}): Promise<void> {
+  const { data, headers } = await api.get("/applications/export", {
+    params,
+    responseType: "blob",
+  });
+  const disposition = String(headers["content-disposition"] || "");
+  const name = /filename="([^"]+)"/.exec(disposition)?.[1] || "applications.csv";
+  const url = URL.createObjectURL(data as Blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

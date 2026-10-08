@@ -42,6 +42,8 @@ import { Modal } from '@/components/ui/Modal';
 import { Spinner } from '@/components/ui/Spinner';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { toast } from '@/lib/toast';
+import InterviewCard from '@/components/admin/InterviewCard';
+import FollowUpsCard from '@/components/admin/FollowUpsCard';
 
 import { formatDate } from '@/lib/utils';
 import type { Application, WhatsAppMessage } from '@/types';
@@ -90,6 +92,7 @@ export default function ApplicationDetailPage() {
   const [notifyCandidate, setNotifyCandidate] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [resending, setResending] = useState(false);
+  const [promptInterview, setPromptInterview] = useState(false);
 
   const handleCopyId = async () => {
     if (!app) return;
@@ -117,6 +120,8 @@ export default function ApplicationDetailPage() {
       setApp({ ...app, status: updated.status });
       setStatusConfirm(null);
       reportNotification(updated.notification);
+      // Moving to "Interview" without a time yet: open the scheduler.
+      if (status === 'interview' && !app.interview?.scheduledAt) setPromptInterview(true);
       await load(); // pick up the new message log entry
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to update status');
@@ -421,6 +426,21 @@ export default function ApplicationDetailPage() {
               ))}
             </div>
           </motion.div>
+
+          <InterviewCard
+            applicationId={app._id}
+            candidateName={app.name}
+            jobTitle={jobTitle}
+            interview={app.interview}
+            startEditing={promptInterview}
+            onChange={(interview) => { setApp((a) => (a ? { ...a, interview } : a)); setPromptInterview(false); }}
+          />
+
+          <FollowUpsCard
+            applicationId={app._id}
+            followUps={app.followUps || []}
+            onChange={(followUps) => setApp((a) => (a ? { ...a, followUps } : a))}
+          />
 
           {/* WhatsApp messages */}
           <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 }} className="rounded-2xl border border-hairline bg-white p-6 shadow-soft">

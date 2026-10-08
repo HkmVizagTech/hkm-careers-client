@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { formatDate } from '@/lib/utils';
+import AttentionPanel from '@/components/admin/AttentionPanel';
 import type { Application } from '@/types';
 
 interface Stats {
@@ -124,6 +125,8 @@ export default function DashboardPage() {
           );
         })}
       </div>
+
+      <AttentionPanel />
 
       {/* Recent Applications */}
       <div className="mt-8">

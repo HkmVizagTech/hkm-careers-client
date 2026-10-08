@@ -11,6 +11,7 @@ import {
   Briefcase,
   MapPin,
   FileText,
+  CalendarDays,
 } from 'lucide-react';
 import { getAdminJobs, getDepartments, deleteJob } from '@/lib/services';
 import { Badge } from '@/components/ui/Badge';
@@ -135,6 +136,16 @@ export default function AdminJobsPage() {
                   <FileText className="h-3 w-3" />
                   {job.applicationCount} application{job.applicationCount !== 1 ? 's' : ''}
                 </span>
+                {job.deadline && (() => {
+                  const days = Math.ceil((new Date(job.deadline).getTime() - Date.now()) / 86_400_000);
+                  const tone = days < 0 ? 'bg-gray-100 text-gray-500' : days <= 3 ? 'bg-orange-100 text-orange-700' : 'bg-ocean/10 text-ocean';
+                  return (
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-medium ${tone}`}>
+                      <CalendarDays className="h-3 w-3" />
+                      {days < 0 ? 'Closed' : 'Closes'} {formatDate(job.deadline)}
+                    </span>
+                  );
+                })()}
                 <span className="ml-auto text-gray-400">{formatDate(job.createdAt)}</span>
               </div>
 

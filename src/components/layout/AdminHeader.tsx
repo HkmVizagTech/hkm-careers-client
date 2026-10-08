@@ -2,6 +2,7 @@
 
 import { Menu, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import NotificationBell from '@/components/admin/NotificationBell';
 
 interface AdminHeaderProps {
   title: string;
@@ -28,7 +29,8 @@ export default function AdminHeader({ title, onMenuToggle }: AdminHeaderProps) {
         </div>
 
         {/* Right: user info + logout */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <NotificationBell />
           {user && (
             <div className="hidden items-center gap-2 sm:flex">
               <div
