@@ -47,6 +47,8 @@ interface JobFormState {
   targetGender: string;
   /** YYYY-MM-DD or '' for no deadline */
   deadline: string;
+  /** Positions to fill (string while typing) */
+  openings: string;
 }
 
 const emptyForm: JobFormState = {
@@ -63,6 +65,7 @@ const emptyForm: JobFormState = {
   askEducationalDetails: false,
   targetGender: 'any',
   deadline: '',
+  openings: '1',
 };
 
 /** One "point" row used by the repeating bullet inputs. */
@@ -160,6 +163,7 @@ export default function JobForm({
           askEducationalDetails: job.askEducationalDetails || false,
           targetGender: job.targetGender || 'any',
           deadline: job.deadline ? toISTDateInput(job.deadline) : '',
+          openings: String(job.openings || 1),
         }
       : emptyForm
   );
@@ -212,6 +216,7 @@ export default function JobForm({
     try {
       const jobData = {
         ...form,
+        openings: Math.max(1, parseInt(form.openings, 10) || 1),
         description: filledPoints(descriptionPoints).join('\n'),
         responsibilities: filledPoints(responsibilityPoints).join('\n'),
         qualifications: filledPoints(qualificationPoints).join('\n'),
@@ -359,6 +364,21 @@ export default function JobForm({
                     placeholder="e.g. 2-3 years"
                     className={inputClass('experience')}
                   />
+                </div>
+                <div>
+                  <label htmlFor="job-openings" className="mb-1.5 block text-sm font-semibold text-gray-700">Openings</label>
+                  <input
+                    id="job-openings"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={3}
+                    value={form.openings}
+                    onChange={(e) => set('openings', e.target.value.replace(/\D/g, ''))}
+                    onBlur={() => !parseInt(form.openings, 10) && set('openings', '1')}
+                    className={inputClass('openings')}
+                  />
+                  <p className="mt-1 text-xs text-gray-400">How many people to hire. The job closes once this many are Selected.</p>
                 </div>
               </div>
 

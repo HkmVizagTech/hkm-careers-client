@@ -13,6 +13,8 @@ import type {
   AttentionSummary,
   Interview,
   FollowUp,
+  RoleFilled,
+  JobPipeline,
 } from "@/types";
 
 export async function getPublicJobs(params?: {
@@ -113,7 +115,7 @@ export async function updateApplicationStatus(
   id: string,
   status: string,
   notify = true
-): Promise<Application & { notification?: WhatsAppMessage | null }> {
+): Promise<Application & { notification?: WhatsAppMessage | null; roleFilled?: RoleFilled | null }> {
   const { data } = await api.patch(`/applications/${id}/status`, {
     status,
     notify,
@@ -235,10 +237,30 @@ export async function getAttentionSummary(): Promise<AttentionSummary> {
 
 export async function scheduleInterview(
   id: string,
-  interview: { scheduledAt: string; mode?: string; location?: string; notes?: string }
-): Promise<Interview> {
+  interview: { scheduledAt: string; mode?: string; location?: string; notes?: string; notify?: boolean }
+): Promise<{ interview: Interview; notification: WhatsAppMessage | null }> {
   const { data } = await api.put(`/applications/${id}/interview`, interview);
-  return data.interview;
+  return data;
+}
+
+/** Re-send the interview date/time WhatsApp. */
+export async function resendInterviewNotification(id: string): Promise<{
+  notification: WhatsAppMessage | null;
+  whatsappMessages: WhatsAppMessage[];
+}> {
+  const { data } = await api.post(`/applications/${id}/interview/notify`);
+  return data;
+}
+
+export async function getJobPipeline(jobId: string): Promise<JobPipeline> {
+  const { data } = await api.get(`/jobs/${jobId}/pipeline`);
+  return data;
+}
+
+/** Close the job and move everyone still in progress to "Not Selected". */
+export async function closeJobRemaining(jobId: string, notify: boolean): Promise<{ updated: number; notified: number }> {
+  const { data } = await api.post(`/jobs/${jobId}/close-remaining`, { notify });
+  return data;
 }
 
 export async function clearInterview(id: string): Promise<void> {

@@ -45,9 +45,10 @@ import { toast } from '@/lib/toast';
 import InterviewCard from '@/components/admin/InterviewCard';
 import FollowUpsCard from '@/components/admin/FollowUpsCard';
 import ResumeActions from '@/components/admin/ResumeActions';
+import CloseRemainingModal from '@/components/admin/CloseRemainingModal';
 
 import { formatDate } from '@/lib/utils';
-import type { Application, WhatsAppMessage } from '@/types';
+import type { Application, RoleFilled, WhatsAppMessage } from '@/types';
 
 const statuses = [
   { value: 'received', label: 'Received', color: 'bg-gray-100 text-gray-700' },
@@ -94,6 +95,7 @@ export default function ApplicationDetailPage() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [resending, setResending] = useState(false);
   const [promptInterview, setPromptInterview] = useState(false);
+  const [roleFilled, setRoleFilled] = useState<RoleFilled | null>(null);
 
   const handleCopyId = async () => {
     if (!app) return;
@@ -123,6 +125,8 @@ export default function ApplicationDetailPage() {
       reportNotification(updated.notification);
       // Moving to "Interview" without a time yet: open the scheduler.
       if (status === 'interview' && !app.interview?.scheduledAt) setPromptInterview(true);
+      // Last opening filled: offer to wrap up the other applicants.
+      if (updated.roleFilled) setRoleFilled(updated.roleFilled);
       await load(); // pick up the new message log entry
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to update status');
@@ -218,12 +222,15 @@ export default function ApplicationDetailPage() {
         <div className="mt-4 rounded-xl bg-background p-3.5">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Applied For</p>
           <p className="mt-0.5 font-bold text-navy">{jobTitle}</p>
+          <p className="mt-1 text-xs text-gray-500">
+            Came from: <span className="font-semibold capitalize text-gray-700">{app.source || 'Careers site (direct)'}</span>
+          </p>
         </div>
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Main */}
-        <div className="space-y-6 lg:col-span-2">
+        <div className="min-w-0 space-y-6 lg:col-span-2">
           {/* Resume */}
           {app.resumeUrl && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-hairline bg-white p-6 shadow-soft">
@@ -403,14 +410,14 @@ export default function ApplicationDetailPage() {
               <input type="text" placeholder="Add a note..." value={noteText}
                 onChange={(e) => setNoteText(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddNote()}
-                className="flex-1 rounded-xl border border-gray-200 bg-background px-4 py-2.5 text-sm focus:border-ocean focus:outline-none focus:ring-4 focus:ring-ocean/15" />
+                className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-background px-4 py-2.5 text-sm focus:border-ocean focus:outline-none focus:ring-4 focus:ring-ocean/15" />
               <Button onClick={handleAddNote} loading={addingNote} disabled={!noteText.trim()}>Add</Button>
             </div>
           </motion.div>
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           {/* Status Update */}
           <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} className="rounded-2xl border border-hairline bg-white p-6 shadow-soft">
             <h2 className="text-base font-bold text-gray-900">Update Status</h2>
@@ -432,6 +439,7 @@ export default function ApplicationDetailPage() {
             interview={app.interview}
             startEditing={promptInterview}
             onChange={(interview) => { setApp((a) => (a ? { ...a, interview } : a)); setPromptInterview(false); }}
+            onMessage={() => load()}
           />
 
           <FollowUpsCard
@@ -464,7 +472,9 @@ export default function ApplicationDetailPage() {
                   const st = deliveryStyles[m.status];
                   const about = m.kind === 'received'
                     ? 'Application received'
-                    : `Status: ${statuses.find((s) => s.value === m.applicationStatus)?.label ?? m.applicationStatus}`;
+                    : m.kind === 'interview'
+                      ? 'Interview details'
+                      : `Status: ${statuses.find((s) => s.value === m.applicationStatus)?.label ?? m.applicationStatus}`;
                   return (
                     <li key={m._id} className="border-l-2 border-ocean/25 pl-3">
                       <div className="flex items-center justify-between gap-2">
@@ -523,6 +533,11 @@ export default function ApplicationDetailPage() {
           <Button loading={updatingStatus} onClick={() => statusConfirm && handleStatusChange(statusConfirm)}>Confirm</Button>
         </div>
       </Modal>
+
+      <CloseRemainingModal
+        target={roleFilled ? { jobId: roleFilled.jobId, filled: roleFilled } : null}
+        onClose={() => setRoleFilled(null)}
+      />
 
       {/* Delete Confirmation */}
       <Modal isOpen={deleteConfirm} onClose={() => setDeleteConfirm(false)} title="Delete Application" size="sm">

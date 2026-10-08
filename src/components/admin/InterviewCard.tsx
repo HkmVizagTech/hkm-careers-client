@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { CalendarClock, CalendarPlus, MapPin, Pencil, Phone, Video, X } from 'lucide-react';
+import { CalendarClock, CalendarPlus, MapPin, Pencil, Phone, Send, Video, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { clearInterview, scheduleInterview } from '@/lib/services';
+import { clearInterview, resendInterviewNotification, scheduleInterview } from '@/lib/services';
 import { toast } from '@/lib/toast';
 import { formatDateTime, toDateTimeLocal } from '@/lib/utils';
-import type { Interview, InterviewMode } from '@/types';
+import type { Interview, InterviewMode, WhatsAppMessage } from '@/types';
 
 const MODES: { value: InterviewMode; label: string; icon: typeof Video }[] = [
   { value: 'in-person', label: 'In person', icon: MapPin },
@@ -41,11 +41,20 @@ interface Props {
   jobTitle: string;
   interview?: Interview | null;
   onChange: (interview: Interview | null) => void;
+  /** Called after a WhatsApp was attempted, so the page can refresh its message log. */
+  onMessage?: () => void;
   /** Open the form straight away (e.g. right after the status was set to Interview). */
   startEditing?: boolean;
 }
 
-export default function InterviewCard({ applicationId, candidateName, jobTitle, interview, onChange, startEditing }: Props) {
+function reportMessage(n: WhatsAppMessage | null | undefined, savedText: string) {
+  if (!n) return toast.success(savedText);
+  if (n.status === 'failed') toast.error(`${savedText}, but the WhatsApp failed: ${n.error ?? 'unknown error'}`);
+  else if (n.status === 'skipped') toast.info(`${savedText}. WhatsApp not sent: ${n.error ?? 'skipped'}`);
+  else toast.success(`${savedText} and the candidate was sent the details on WhatsApp`);
+}
+
+export default function InterviewCard({ applicationId, candidateName, jobTitle, interview, onChange, onMessage, startEditing }: Props) {
   const scheduled = interview?.scheduledAt ? interview : null;
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -53,12 +62,15 @@ export default function InterviewCard({ applicationId, candidateName, jobTitle, 
   const [mode, setMode] = useState<InterviewMode>('in-person');
   const [location, setLocation] = useState('');
   const [notes, setNotes] = useState('');
+  const [notify, setNotify] = useState(true);
+  const [resending, setResending] = useState(false);
 
   const openForm = () => {
     setWhen(scheduled ? toDateTimeLocal(scheduled.scheduledAt) : '');
     setMode(scheduled?.mode || 'in-person');
     setLocation(scheduled?.location || '');
     setNotes(scheduled?.notes || '');
+    setNotify(true);
     setEditing(true);
   };
 
@@ -72,19 +84,34 @@ export default function InterviewCard({ applicationId, candidateName, jobTitle, 
     if (Number.isNaN(at.getTime())) return toast.error('Invalid date');
     setSaving(true);
     try {
-      const saved = await scheduleInterview(applicationId, {
+      const res = await scheduleInterview(applicationId, {
         scheduledAt: at.toISOString(),
         mode,
         location: location.trim(),
         notes: notes.trim(),
+        notify,
       });
-      onChange(saved);
+      onChange(res.interview);
       setEditing(false);
-      toast.success(scheduled ? 'Interview rescheduled' : 'Interview scheduled. You will be reminded the day before.');
+      reportMessage(res.notification, scheduled ? 'Interview rescheduled' : 'Interview scheduled');
+      if (res.notification) onMessage?.();
     } catch {
       toast.error('Could not save the interview');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const resend = async () => {
+    setResending(true);
+    try {
+      const res = await resendInterviewNotification(applicationId);
+      reportMessage(res.notification, 'Interview details re-sent');
+      onMessage?.();
+    } catch {
+      toast.error('Could not send the interview details');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -171,6 +198,18 @@ export default function InterviewCard({ applicationId, candidateName, jobTitle, 
             <span className="mb-1 block text-xs font-semibold text-gray-600">Notes for the panel (optional)</span>
             <textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} className={`${inputCls} resize-none`} />
           </label>
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-xl bg-emerald-50 p-3 text-xs text-emerald-900">
+            <input
+              type="checkbox"
+              checked={notify}
+              onChange={(e) => setNotify(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500"
+            />
+            <span>
+              <span className="font-semibold">Send WhatsApp to the candidate</span>
+              <span className="block text-emerald-800/80">Date, time, mode and venue/link, with their tracking button.</span>
+            </span>
+          </label>
           <div className="flex gap-2 pt-1">
             <Button onClick={save} loading={saving} className="flex-1">
               {scheduled ? 'Save changes' : 'Schedule'}
@@ -190,7 +229,7 @@ export default function InterviewCard({ applicationId, candidateName, jobTitle, 
             </button>
           )}
           <p className="text-[11px] leading-relaxed text-gray-400">
-            Admins get a reminder in the bell the day before and 2 hours before. The candidate is not messaged automatically.
+            Admins also get a reminder in the bell the day before and 2 hours before.
           </p>
         </div>
       ) : scheduled ? (
@@ -217,14 +256,24 @@ export default function InterviewCard({ applicationId, candidateName, jobTitle, 
             {scheduled.notes && <p className="mt-2 whitespace-pre-line text-xs text-gray-500">{scheduled.notes}</p>}
           </div>
           {!past && (
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <button
+              type="button"
+              onClick={resend}
+              disabled={resending}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-900 disabled:opacity-50"
+            >
+              <Send className={`h-3.5 w-3.5 ${resending ? 'animate-pulse' : ''}`} /> Send details on WhatsApp
+            </button>
             <a
               href={calendarLink(scheduled, candidateName, jobTitle)}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-ocean hover:text-navy"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-ocean hover:text-navy"
             >
               <CalendarPlus className="h-3.5 w-3.5" /> Add to Google Calendar
             </a>
+            </div>
           )}
         </div>
       ) : (

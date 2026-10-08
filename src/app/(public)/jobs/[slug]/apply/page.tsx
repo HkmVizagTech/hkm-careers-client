@@ -37,8 +37,10 @@ import {
   Pencil,
   Search,
   MessageCircle,
+  Info,
 } from 'lucide-react';
 import { getPublicJobBySlug, submitApplication } from '@/lib/services';
+import { captureApplySource, readApplySource } from '@/lib/applySource';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { DatePicker } from '@/components/ui/DatePicker';
@@ -89,7 +91,7 @@ function getStepPlan(isMobile: boolean, asksEducation: boolean): StepPlan {
 const SECTION_FIELDS: Record<SectionKey, (keyof FormData)[]> = {
   personal: ['name', 'email', 'phone', 'location', 'gender', 'dateOfBirth'],
   experience: ['availableToJoin', 'currentLocation'],
-  educational: ['highestDegree', 'collegeName', 'collegeCity', 'studyYears'],
+  educational: ['highestDegree', 'collegeName', 'collegeCity', 'studyFrom', 'studyTo'],
   whyHire: ['coverLetter'],
   // The resume is a File in component state, not part of the Zod schema.
   resume: [],
@@ -109,6 +111,27 @@ const GENDER_LABELS: Record<string, string> = {
   other: 'Other',
   'prefer-not-to-say': 'Prefer not to say',
 };
+
+const CURRENT_YEAR = new Date().getFullYear();
+/** Study start: this year back to 1970. */
+const START_YEAR_OPTIONS = Array.from({ length: CURRENT_YEAR - 1969 }, (_, i) => String(CURRENT_YEAR - i)).map((y) => ({ value: y, label: y }));
+/** Passed-out / expected: up to 6 years ahead, for current students. */
+const endYearOptions = (from?: string) => {
+  const min = from ? Number(from) : 1970;
+  const out: { value: string; label: string }[] = [];
+  for (let y = CURRENT_YEAR + 6; y >= min; y--) out.push({ value: String(y), label: y > CURRENT_YEAR ? `${y} (expected)` : String(y) });
+  return out;
+};
+
+/** "0" -> "Immediately", "15" -> "15 days" */
+const joinLabel = (days?: string) => {
+  if (!days) return '';
+  const n = Number(days);
+  if (!Number.isFinite(n)) return days;
+  return n === 0 ? 'Immediately' : `${n} day${n === 1 ? '' : 's'}`;
+};
+
+const GENDER_ONLY_LABEL: Record<string, string> = { male: 'male', female: 'female' };
 
 const DEGREE_OPTIONS = [
   { value: '10th', label: '10th' },
@@ -157,7 +180,10 @@ const schema = z.object({
   lastEmployer: z.string().optional(),
   lastEmploymentFrom: z.string().optional(),
   lastEmploymentTo: z.string().optional(),
-  availableToJoin: z.string().min(1, 'Please specify when you can join'),
+  availableToJoin: z
+    .string()
+    .min(1, 'Please enter the number of days (0 if you can join immediately)')
+    .regex(/^\d{1,3}$/, 'Enter the number of days only, e.g. 15 (0 = immediately)'),
   currentLocation: z.string().min(1, 'Current location is required'),
   linkedinUrl: z.string().url('Please enter a valid URL').optional().or(z.literal('')),
   githubUrl: z.string().url('Please enter a valid URL').optional().or(z.literal('')),
@@ -165,7 +191,8 @@ const schema = z.object({
   highestDegree: z.string().optional(),
   collegeName: z.string().optional(),
   collegeCity: z.string().optional(),
-  studyYears: z.string().optional(),
+  studyFrom: z.string().optional(),
+  studyTo: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -234,6 +261,7 @@ export default function ApplyPage() {
     control,
     setValue,
     setError,
+    clearErrors,
     trigger,
     formState: { errors },
   } = useForm<FormData>({
@@ -247,6 +275,8 @@ export default function ApplyPage() {
       lastEmploymentFrom: '',
       lastEmploymentTo: '',
       highestDegree: '',
+      studyFrom: '',
+      studyTo: '',
     },
   });
 
@@ -320,16 +350,39 @@ export default function ApplyPage() {
       { name: 'highestDegree' as const, message: 'Highest degree is required' },
       { name: 'collegeName' as const, message: 'College name is required' },
       { name: 'collegeCity' as const, message: 'College city is required' },
-      { name: 'studyYears' as const, message: 'Study years are required' },
+      { name: 'studyFrom' as const, message: 'Select the year you started' },
+      { name: 'studyTo' as const, message: 'Select the year you passed out' },
     ];
     const missing = eduFields.filter((f) => !watch(f.name)?.trim());
     missing.forEach((f) => setError(f.name, { type: 'manual', message: f.message }));
+    const from = Number(watch('studyFrom'));
+    const to = Number(watch('studyTo'));
+    if (from && to && to < from) {
+      setError('studyTo', { type: 'manual', message: 'Passed-out year cannot be before the start year' });
+      return false;
+    }
     return missing.length === 0;
+  };
+
+  /** Jobs limited to one gender: block a mismatching choice with a clear message. */
+  const genderOnly = job?.targetGender && job.targetGender !== 'any' ? job.targetGender : null;
+  const genderMismatch = (value?: string) => !!genderOnly && !!value && value !== genderOnly;
+  const genderOnlyMessage = genderOnly
+    ? `This position is open to ${GENDER_ONLY_LABEL[genderOnly]} applicants only.`
+    : '';
+  const validateGender = () => {
+    if (!genderMismatch(watch('gender'))) return true;
+    setError('gender', { type: 'manual', message: genderOnlyMessage });
+    return false;
   };
 
   const handleContinue = async () => {
     const valid = await trigger(fieldsForStep(step), { shouldFocus: true });
     if (!valid) return;
+
+    if (layout.personal === step && !validateGender()) {
+      return;
+    }
 
     if (layout.educational === step && !validateEducational()) {
       document.getElementById('educational-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -364,6 +417,9 @@ export default function ApplyPage() {
       scrollToFormTop();
     }
   };
+
+  // Remember ?src=linkedin etc. if the shared link pointed straight at the form.
+  useEffect(() => { captureApplySource(); }, []);
 
   useEffect(() => {
     async function load() {
@@ -411,6 +467,12 @@ export default function ApplyPage() {
   const onSubmit = async (data: FormData) => {
     if (!job) return;
 
+    if (!validateGender()) {
+      setStep(layout.personal);
+      scrollToFormTop();
+      return;
+    }
+
     // These sections may live on an earlier step, so switch to it before scrolling —
     // otherwise the error lands on hidden markup and the submit looks like a no-op.
     if (!validateEducational()) {
@@ -448,7 +510,7 @@ export default function ApplyPage() {
       if (data.location) formData.append('location', data.location);
       if (data.gender) formData.append('gender', data.gender);
       if (data.dateOfBirth) formData.append('dateOfBirth', data.dateOfBirth);
-      if (data.availableToJoin) formData.append('availableToJoin', data.availableToJoin);
+      if (data.availableToJoin) formData.append('availableToJoin', joinLabel(data.availableToJoin));
       if (data.currentLocation) formData.append('currentLocation', data.currentLocation);
       if (data.linkedinUrl) formData.append('linkedinUrl', data.linkedinUrl);
       if (data.githubUrl) formData.append('githubUrl', data.githubUrl);
@@ -456,7 +518,10 @@ export default function ApplyPage() {
       if (data.highestDegree) formData.append('highestDegree', data.highestDegree);
       if (data.collegeName) formData.append('collegeName', data.collegeName);
       if (data.collegeCity) formData.append('collegeCity', data.collegeCity);
-      if (data.studyYears) formData.append('studyYears', data.studyYears);
+      if (data.studyFrom && data.studyTo) formData.append('studyYears', `${data.studyFrom} - ${data.studyTo}`);
+      // Where the applicant came from (LinkedIn, Indeed, WhatsApp...), set by shared links: ?src=linkedin
+      const source = readApplySource();
+      if (source) formData.append('source', source);
       formData.append('resume', file);
       const result = await submitApplication(formData);
       setApplicationId(result.application.id);
@@ -484,7 +549,7 @@ export default function ApplyPage() {
       { label: 'Gender', value: formData.gender ? GENDER_LABELS[formData.gender] || formData.gender : '' },
       { label: 'Date of Birth', value: formData.dateOfBirth || '' },
       { label: 'Location', value: formData.location || '' },
-      { label: 'Available to Join', value: formData.availableToJoin || '' },
+      { label: 'Available to Join', value: joinLabel(formData.availableToJoin) },
       { label: 'Current Location', value: formData.currentLocation || '' },
     ];
     if (formData.isExperienced) {
@@ -497,7 +562,7 @@ export default function ApplyPage() {
       rows.push(
         { label: 'Highest Degree', value: formData.highestDegree || '' },
         { label: 'College', value: [formData.collegeName, formData.collegeCity].filter(Boolean).join(', ') },
-        { label: 'Study Years', value: formData.studyYears || '' },
+        { label: 'Study Years', value: formData.studyFrom && formData.studyTo ? `${formData.studyFrom} - ${formData.studyTo}` : '' },
       );
     }
     if (formData.linkedinUrl) rows.push({ label: 'LinkedIn', value: formData.linkedinUrl });
@@ -715,6 +780,16 @@ export default function ApplyPage() {
               ))}
             </div>
 
+            {genderOnly && (
+              <div role="note" className="mt-6 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                <p>
+                  <span className="font-semibold">{genderOnlyMessage}</span>{' '}
+                  Please apply only if this applies to you.
+                </p>
+              </div>
+            )}
+
             {globalError && (
               <div className="mt-6 rounded-xl border border-red-200 bg-gradient-to-r from-red-50 to-red-50/50 p-4 text-sm text-red-700">
                 {globalError}
@@ -786,7 +861,11 @@ export default function ApplyPage() {
                         render={({ field }) => (
                           <SelectField
                             value={field.value}
-                            onChange={field.onChange}
+                            onChange={(v) => {
+                              field.onChange(v);
+                              if (genderMismatch(v)) setError('gender', { type: 'manual', message: genderOnlyMessage });
+                              else clearErrors('gender');
+                            }}
                             options={GENDER_OPTIONS}
                             placeholder="Select gender"
                             error={!!errors.gender}
@@ -942,9 +1021,17 @@ export default function ApplyPage() {
                       <input
                         type="text"
                         inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={3}
                         enterKeyHint="next"
-                        placeholder="e.g. 15, 30, Immediately"
-                        {...register('availableToJoin')}
+                        placeholder="e.g. 15 (0 = immediately)"
+                        {...register('availableToJoin', {
+                          // Digits only, even when pasted.
+                          onChange: (e) => {
+                            const digits = String(e.target.value).replace(/\D/g, '').slice(0, 3);
+                            if (digits !== e.target.value) setValue('availableToJoin', digits, { shouldValidate: true });
+                          },
+                        })}
                         className={inputCls(!!errors.availableToJoin)}
                       />
                     </Field>
@@ -1100,15 +1187,46 @@ export default function ApplyPage() {
                           />
                         </div>
                       </Field>
-                      <Field label="Study Years" required error={errors.studyYears?.message}>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          enterKeyHint="next"
-                          placeholder="e.g. 2020 - 2024"
-                          {...register('studyYears')}
-                          className={`w-full rounded-xl border bg-white py-3.5 px-4 text-base shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean sm:text-sm ${errors.studyYears ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`}
-                        />
+                      <Field label="Study Years" required error={errors.studyFrom?.message || errors.studyTo?.message}>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Controller
+                            control={control}
+                            name="studyFrom"
+                            render={({ field }) => (
+                              <SelectField
+                                value={field.value}
+                                onChange={(v) => {
+                                  field.onChange(v);
+                                  clearErrors('studyFrom');
+                                  // Keep the end year valid when the start moves past it.
+                                  const to = watch('studyTo');
+                                  if (to && Number(to) < Number(v)) setValue('studyTo', '');
+                                }}
+                                options={START_YEAR_OPTIONS}
+                                placeholder="From"
+                                error={!!errors.studyFrom}
+                                icon={Calendar}
+                              />
+                            )}
+                          />
+                          <Controller
+                            control={control}
+                            name="studyTo"
+                            render={({ field }) => (
+                              <SelectField
+                                value={field.value}
+                                onChange={(v) => {
+                                  field.onChange(v);
+                                  clearErrors('studyTo');
+                                }}
+                                options={endYearOptions(watch('studyFrom'))}
+                                placeholder="Passed out"
+                                error={!!errors.studyTo}
+                                icon={GraduationCap}
+                              />
+                            )}
+                          />
+                        </div>
                       </Field>
                     </div>
                   </div>
@@ -1217,16 +1335,16 @@ export default function ApplyPage() {
                       Review your details
                       <span className="ml-auto text-xs font-normal text-gray-400">tap to expand</span>
                     </summary>
-                    <dl className="mt-4 grid gap-x-6 gap-y-2.5 sm:grid-cols-2">
+                    <dl className="mt-4 grid min-w-0 gap-x-6 gap-y-2.5 sm:grid-cols-2">
                       {reviewRows.map((row) => (
-                        <div key={row.label} className="flex items-baseline justify-between gap-3 border-b border-gray-100 pb-2">
-                          <dt className="text-xs font-semibold uppercase tracking-wide text-gray-400">{row.label}</dt>
-                          <dd className="truncate text-sm font-medium text-gray-700">{row.value}</dd>
+                        <div key={row.label} className="flex min-w-0 items-baseline justify-between gap-3 border-b border-gray-100 pb-2">
+                          <dt className="shrink-0 text-xs font-semibold uppercase tracking-wide text-gray-400">{row.label}</dt>
+                          <dd className="min-w-0 text-right text-sm font-medium text-gray-700 [overflow-wrap:anywhere]">{row.value}</dd>
                         </div>
                       ))}
-                      <div className="flex items-baseline justify-between gap-3 border-b border-gray-100 pb-2">
-                        <dt className="text-xs font-semibold uppercase tracking-wide text-gray-400">Resume</dt>
-                        <dd className="truncate text-sm font-medium text-gray-700">{file ? file.name : '—'}</dd>
+                      <div className="flex min-w-0 items-baseline justify-between gap-3 border-b border-gray-100 pb-2">
+                        <dt className="shrink-0 text-xs font-semibold uppercase tracking-wide text-gray-400">Resume</dt>
+                        <dd className="min-w-0 text-right text-sm font-medium text-gray-700 [overflow-wrap:anywhere]">{file ? file.name : '—'}</dd>
                       </div>
                     </dl>
                   </details>
@@ -1257,13 +1375,15 @@ export default function ApplyPage() {
                     </Link>
                   )}
 
+                  {/* Distinct keys: React must not turn the clicked Continue button into the
+                      submit button mid-click, or the browser submits the form on the last step. */}
                   {step < totalSteps ? (
-                    <Button type="button" onClick={handleContinue} size="lg">
+                    <Button key="continue" type="button" onClick={handleContinue} size="lg">
                       Continue
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   ) : (
-                    <Button type="submit" loading={submitting} size="lg">
+                    <Button key="submit" type="submit" loading={submitting} size="lg">
                       <Send className="h-4 w-4" />
                       Submit Application
                     </Button>

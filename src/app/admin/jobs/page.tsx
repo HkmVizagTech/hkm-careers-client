@@ -12,6 +12,9 @@ import {
   MapPin,
   FileText,
   CalendarDays,
+  Share2,
+  Lock,
+  Users,
 } from 'lucide-react';
 import { getAdminJobs, getDepartments, deleteJob } from '@/lib/services';
 import { Badge } from '@/components/ui/Badge';
@@ -22,6 +25,8 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { toast } from '@/lib/toast';
 
 import { formatDate } from '@/lib/utils';
+import ShareJobModal from '@/components/admin/ShareJobModal';
+import CloseRemainingModal from '@/components/admin/CloseRemainingModal';
 import type { Job, Department } from '@/types';
 
 const typeLabels: Record<string, string> = { 'full-time': 'Full Time', 'part-time': 'Part Time', volunteer: 'Volunteer', intern: 'Internship' };
@@ -36,6 +41,8 @@ export default function AdminJobsPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [shareJob, setShareJob] = useState<Job | null>(null);
+  const [closeJobId, setCloseJobId] = useState<string | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -136,6 +143,11 @@ export default function AdminJobsPage() {
                   <FileText className="h-3 w-3" />
                   {job.applicationCount} application{job.applicationCount !== 1 ? 's' : ''}
                 </span>
+                {(job.openings || 1) > 1 && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-plum/10 px-2.5 py-0.5 font-medium text-plum">
+                    <Users className="h-3 w-3" /> {job.openings} openings
+                  </span>
+                )}
                 {job.deadline && (() => {
                   const days = Math.ceil((new Date(job.deadline).getTime() - Date.now()) / 86_400_000);
                   const tone = days < 0 ? 'bg-gray-100 text-gray-500' : days <= 3 ? 'bg-orange-100 text-orange-700' : 'bg-ocean/10 text-ocean';
@@ -149,13 +161,28 @@ export default function AdminJobsPage() {
                 <span className="ml-auto text-gray-400">{formatDate(job.createdAt)}</span>
               </div>
 
-              <div className="mt-4 flex items-center justify-end gap-1.5 border-t border-gray-100 pt-3">
+              <div className="mt-4 flex flex-wrap items-center justify-end gap-1.5 border-t border-gray-100 pt-3">
                 <Link
                   href={`/jobs/${job.slug}`}
                   className="rounded-lg px-3 py-2 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-navy"
                 >
                   View public page
                 </Link>
+                <button
+                  type="button"
+                  onClick={() => setShareJob(job)}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-ocean/10 px-3.5 py-2 text-xs font-semibold text-ocean transition-colors hover:bg-ocean/20"
+                >
+                  <Share2 className="h-3.5 w-3.5" /> Share
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCloseJobId(job._id)}
+                  title="Close the job and wrap up applicants still in progress"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-gray-100 px-3.5 py-2 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-200"
+                >
+                  <Lock className="h-3.5 w-3.5" /> {job.status === 'active' ? 'Close' : 'Wrap up'}
+                </button>
                 <Link
                   href={`/admin/jobs/${job._id}/edit`}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-navy/5 px-3.5 py-2 text-xs font-semibold text-navy transition-colors hover:bg-navy/10"
@@ -173,6 +200,13 @@ export default function AdminJobsPage() {
           ))}
         </div>
       )}
+
+      <ShareJobModal job={shareJob} onClose={() => setShareJob(null)} />
+      <CloseRemainingModal
+        target={closeJobId ? { jobId: closeJobId } : null}
+        onClose={() => setCloseJobId(null)}
+        onDone={() => loadData()}
+      />
 
       {/* Delete Confirmation */}
       <Modal isOpen={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="Delete Job" size="sm">

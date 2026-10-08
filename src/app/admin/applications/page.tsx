@@ -200,7 +200,10 @@ export default function ApplicationsPage() {
                           <div>
                             <p className="font-semibold text-gray-900">{app.name}</p>
                             <p className="text-xs text-gray-500">{app.email}</p>
-                            {app.applicationNumber && <p className="font-mono text-[11px] text-ocean">{app.applicationNumber}</p>}
+                            <p className="flex items-center gap-1.5">
+                              {app.applicationNumber && <span className="font-mono text-[11px] text-ocean">{app.applicationNumber}</span>}
+                              {app.source && <span className="rounded bg-gray-100 px-1.5 py-px text-[10px] font-semibold capitalize text-gray-600">via {app.source}</span>}
+                            </p>
                           </div>
                         </div>
                       </td>

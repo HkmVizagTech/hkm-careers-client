@@ -22,6 +22,8 @@ export interface Job {
   status: "draft" | "active" | "closed";
   askEducationalDetails?: boolean;
   targetGender?: 'any' | 'male' | 'female';
+  /** How many people will be hired; the job closes when this many are Selected. */
+  openings?: number;
   /** Last day to apply (end of that day, India time). The job closes itself after it. */
   deadline?: string | null;
   applicationCount: number;
@@ -46,7 +48,7 @@ export type WhatsAppDeliveryStatus =
 
 export interface WhatsAppMessage {
   _id: string;
-  kind: "received" | "status";
+  kind: "received" | "status" | "interview";
   applicationStatus?: string;
   to?: string;
   messageId?: string;
@@ -81,7 +83,8 @@ export type AdminNotificationType =
   | "interview"
   | "job-closing"
   | "job-closed"
-  | "follow-up";
+  | "follow-up"
+  | "position-filled";
 
 export interface AdminNotification {
   _id: string;
@@ -91,6 +94,24 @@ export interface AdminNotification {
   link?: string;
   read: boolean;
   createdAt: string;
+}
+
+export interface RoleFilled {
+  jobId: string;
+  title: string;
+  openings: number;
+  selected: number;
+  remaining: number;
+  closedNow: boolean;
+}
+
+export interface JobPipeline {
+  jobId: string;
+  title: string;
+  status: "draft" | "active" | "closed";
+  openings: number;
+  selected: number;
+  remaining: number;
 }
 
 export interface AttentionSummary {
@@ -148,6 +169,8 @@ export interface Application {
   whatsappMessages?: WhatsAppMessage[];
   interview?: Interview | null;
   followUps?: FollowUp[];
+  /** Where the applicant found the job: linkedin, indeed, whatsapp... */
+  source?: string;
   createdAt: string;
   updatedAt: string;
 }

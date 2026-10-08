@@ -27,6 +27,7 @@ import {
   CalendarDays,
 } from 'lucide-react';
 import { getPublicJobBySlug } from '@/lib/services';
+import { captureApplySource } from '@/lib/applySource';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -79,6 +80,9 @@ export default function JobDetailPage() {
   const [copied, setCopied] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // Shared links carry ?src=linkedin etc.; keep it for the application form.
+  useEffect(() => { captureApplySource(); }, []);
 
   // "Save" keeps a list of bookmarked job slugs in this browser only.
   useEffect(() => {

@@ -12,6 +12,7 @@ import {
   FileText,
   Hourglass,
   Lock,
+  PartyPopper,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -32,6 +33,7 @@ const TYPE_STYLE: Record<AdminNotificationType, { icon: LucideIcon; tone: string
   'job-closing': { icon: Clock, tone: 'bg-orange-100 text-orange-700' },
   'job-closed': { icon: Lock, tone: 'bg-gray-100 text-gray-600' },
   'follow-up': { icon: BellRing, tone: 'bg-teal/10 text-teal' },
+  'position-filled': { icon: PartyPopper, tone: 'bg-emerald-100 text-emerald-700' },
 };
 
 export default function NotificationBell() {
