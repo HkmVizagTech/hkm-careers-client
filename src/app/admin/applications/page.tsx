@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Search, ExternalLink, FileText, ArrowRight, Download, X, CalendarClock } from 'lucide-react';
-import { getAdminApplications, getAdminJobs, getDepartments, exportApplicationsCsv } from '@/lib/services';
+import { getAdminApplications, getAdminJobs, getDepartments, exportApplicationsCsv, viewResume, downloadResume } from '@/lib/services';
 import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -216,10 +216,17 @@ export default function ApplicationsPage() {
                       <td className="px-5 py-4 text-gray-500">{formatDate(app.createdAt)}</td>
                       <td className="px-5 py-4">
                         {app.resumeUrl && (
-                          <a href={app.resumeUrl} target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 rounded-lg bg-ocean/10 px-2.5 py-1 text-xs font-medium text-ocean hover:bg-ocean/20 transition-colors">
-                            <ExternalLink className="h-3 w-3" /> View
-                          </a>
+                          <div className="flex items-center gap-1">
+                            <button type="button" onClick={() => viewResume(app._id, app.resumeUrl).catch(() => toast.error('Could not open the resume'))}
+                              className="inline-flex items-center gap-1 rounded-lg bg-ocean/10 px-2.5 py-1 text-xs font-medium text-ocean hover:bg-ocean/20 transition-colors">
+                              <ExternalLink className="h-3 w-3" /> View
+                            </button>
+                            <button type="button" onClick={() => downloadResume(app._id).catch(() => toast.error('Could not download the resume'))}
+                              title="Download resume" aria-label={`Download ${app.name}'s resume`}
+                              className="inline-flex items-center rounded-lg bg-ocean/10 p-1.5 text-ocean hover:bg-ocean/20 transition-colors">
+                              <Download className="h-3 w-3" />
+                            </button>
+                          </div>
                         )}
                       </td>
                       <td className="px-5 py-4">

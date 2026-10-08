@@ -44,6 +44,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { toast } from '@/lib/toast';
 import InterviewCard from '@/components/admin/InterviewCard';
 import FollowUpsCard from '@/components/admin/FollowUpsCard';
+import ResumeActions from '@/components/admin/ResumeActions';
 
 import { formatDate } from '@/lib/utils';
 import type { Application, WhatsAppMessage } from '@/types';
@@ -229,10 +230,7 @@ export default function ApplicationDetailPage() {
               <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
                 <FileText className="h-5 w-5 text-ocean" /> Resume
               </h2>
-              <a href={app.resumeUrl} target="_blank" rel="noopener noreferrer"
-                className="mt-4 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-ocean to-cyan px-5 py-3 text-sm font-semibold text-white shadow-md shadow-ocean/20 transition-all hover:shadow-lg hover:scale-[1.02]">
-                <Download className="h-4 w-4" /> Download Resume
-              </a>
+              <ResumeActions applicationId={app._id} resumeUrl={app.resumeUrl} />
             </motion.div>
           )}
 
@@ -489,10 +487,7 @@ export default function ApplicationDetailPage() {
             <h2 className="text-base font-bold text-gray-900">Actions</h2>
             <div className="mt-3 space-y-2">
               {app.resumeUrl && (
-                <a href={app.resumeUrl} target="_blank" rel="noopener noreferrer"
-                  className="flex w-full items-center gap-2.5 rounded-xl border border-gray-200 bg-background px-4 py-3 text-sm font-semibold text-gray-700 transition-all hover:bg-ocean/5 hover:border-ocean/30 hover:text-ocean">
-                  <Download className="h-4 w-4" /> Download Resume
-                </a>
+                <ResumeActions applicationId={app._id} resumeUrl={app.resumeUrl} variant="list" />
               )}
               <button onClick={() => setDeleteConfirm(true)}
                 className="flex w-full items-center gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition-all hover:bg-red-100">

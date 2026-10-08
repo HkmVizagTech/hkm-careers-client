@@ -54,15 +54,8 @@ export default function TrackPage() {
   const [searched, setSearched] = useState(false);
   const resultsRef = useRef<HTMLDivElement>(null);
 
-  // Pre-fill the ID when arriving from the success screen (/track?id=...).
-  useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get('id');
-    if (id) setApplicationId(id);
-  }, []);
-
-  const handleTrack = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = applicationId.trim();
+  const runSearch = async (raw: string) => {
+    const trimmed = raw.trim();
     if (!trimmed) return;
     // Dismiss the mobile keyboard so the results are visible.
     (document.activeElement as HTMLElement | null)?.blur();
@@ -88,10 +81,29 @@ export default function TrackPage() {
     }
   };
 
+  // Arriving from the WhatsApp button or the success screen (/track?id=FSD10001):
+  // fill the ID and look it up straight away; the effect below scrolls to the result.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('id');
+    if (id) {
+      setApplicationId(id);
+      runSearch(id);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleTrack = (e: React.FormEvent) => {
+    e.preventDefault();
+    runSearch(applicationId);
+  };
+
   // Once a search finishes, bring the outcome (result or error) into view.
   useEffect(() => {
     if (!searched || loading) return;
-    resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Wait a frame so the result card has rendered and has its height.
+    const raf = requestAnimationFrame(() =>
+      resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    );
+    return () => cancelAnimationFrame(raf);
   }, [searched, loading]);
 
   const isRejected = result?.status === 'rejected';

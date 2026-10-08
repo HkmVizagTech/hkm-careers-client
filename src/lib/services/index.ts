@@ -291,3 +291,75 @@ export async function exportApplicationsCsv(params: {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+// ---------------------------------------------------------------- resume
+
+const fileNameFrom = (disposition: string, fallback: string) => {
+  const star = /filename\*=UTF-8''([^;]+)/i.exec(disposition)?.[1];
+  if (star) {
+    try {
+      return decodeURIComponent(star);
+    } catch {
+      /* fall through */
+    }
+  }
+  return /filename="([^"]+)"/i.exec(disposition)?.[1] || fallback;
+};
+
+async function fetchResume(id: string, inline: boolean) {
+  const { data, headers } = await api.get(`/applications/${id}/resume`, {
+    params: inline ? { inline: 1 } : undefined,
+    responseType: "blob",
+  });
+  const name = fileNameFrom(String(headers["content-disposition"] || ""), "resume");
+  return { blob: data as Blob, name };
+}
+
+/** Download the resume named like "FSD_Chaitanya.pdf". */
+export async function downloadResume(id: string): Promise<void> {
+  const { blob, name } = await fetchResume(id, false);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+/**
+ * Open the resume in a new tab. PDFs open in the browser's viewer; Word files open in
+ * Microsoft's online viewer. Call straight from a click handler so the tab isn't blocked.
+ */
+export async function viewResume(id: string, resumeUrl: string): Promise<void> {
+  const isWord = /\.docx?($|\?)/i.test(resumeUrl);
+  if (isWord && /^https?:\/\//i.test(resumeUrl)) {
+    window.open(`https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(resumeUrl)}`, "_blank", "noopener");
+    return;
+  }
+  // Open the tab now (still inside the click) and fill it once the file arrives.
+  const win = window.open("", "_blank");
+  try {
+    const { blob, name } = await fetchResume(id, true);
+    if (isWord || !/pdf/i.test(blob.type)) {
+      win?.close();
+      return downloadResume(id);
+    }
+    const url = URL.createObjectURL(blob);
+    if (!win) {
+      window.location.assign(url);
+      return;
+    }
+    win.document.title = name;
+    win.document.body.style.margin = "0";
+    const frame = win.document.createElement("iframe");
+    frame.src = url;
+    frame.title = name;
+    frame.style.cssText = "border:0;width:100vw;height:100vh;display:block";
+    win.document.body.appendChild(frame);
+  } catch (err) {
+    win?.close();
+    throw err;
+  }
+}
