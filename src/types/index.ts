@@ -56,6 +56,7 @@ export interface WhatsAppMessage {
 
 export interface Application {
   _id: string;
+  applicationNumber?: string;
   job: Job | string;
   name: string;
   email: string;

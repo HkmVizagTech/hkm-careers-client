@@ -116,6 +116,7 @@ export default function ApplicationsPage() {
                           <div>
                             <p className="font-semibold text-gray-900">{app.name}</p>
                             <p className="text-xs text-gray-500">{app.email}</p>
+                            {app.applicationNumber && <p className="font-mono text-[11px] text-ocean">{app.applicationNumber}</p>}
                           </div>
                         </div>
                       </td>

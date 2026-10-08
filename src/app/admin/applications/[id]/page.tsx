@@ -94,7 +94,7 @@ export default function ApplicationDetailPage() {
   const handleCopyId = async () => {
     if (!app) return;
     try {
-      await navigator.clipboard.writeText(app._id);
+      await navigator.clipboard.writeText(app.applicationNumber || app._id);
       setCopiedId(true);
       setTimeout(() => setCopiedId(false), 2000);
     } catch {
@@ -200,7 +200,7 @@ export default function ApplicationDetailPage() {
                 title="Copy Application ID"
                 className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-gray-50 px-2.5 py-1 font-mono text-xs text-gray-500 transition-colors hover:bg-ocean/10 hover:text-ocean"
               >
-                ID: {app._id}
+                ID: {app.applicationNumber || app._id}
                 {copiedId ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
               </button>
             </div>
