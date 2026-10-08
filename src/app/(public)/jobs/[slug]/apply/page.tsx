@@ -821,7 +821,7 @@ export default function ApplyPage() {
                         enterKeyHint="next"
                         placeholder="e.g. Visakhapatnam"
                         {...register('location')}
-                        className={inputCls(!!errors.location)}
+                        className={`${inputCls(!!errors.location)} pl-10`}
                       />
                     </div>
                   </Field>
