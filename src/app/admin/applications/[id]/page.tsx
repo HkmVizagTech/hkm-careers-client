@@ -23,12 +23,18 @@ import {
   ExternalLink,
   Copy,
   Check,
+  CheckCheck,
+  MessageCircle,
+  RotateCw,
+  AlertTriangle,
+  Ban,
 } from 'lucide-react';
 import {
   getAdminApplication,
   updateApplicationStatus,
   addApplicationNote,
   deleteApplication,
+  resendApplicationNotification,
 } from '@/lib/services';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -38,7 +44,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { toast } from '@/lib/toast';
 
 import { formatDate } from '@/lib/utils';
-import type { Application } from '@/types';
+import type { Application, WhatsAppMessage } from '@/types';
 
 const statuses = [
   { value: 'received', label: 'Received', color: 'bg-gray-100 text-gray-700' },
@@ -48,6 +54,26 @@ const statuses = [
   { value: 'selected', label: 'Selected', color: 'bg-green-100 text-green-700' },
   { value: 'rejected', label: 'Rejected', color: 'bg-red-100 text-red-700' },
 ];
+
+const deliveryStyles: Record<WhatsAppMessage['status'], { label: string; cls: string }> = {
+  submitted: { label: 'Queued', cls: 'bg-gray-100 text-gray-600' },
+  sent: { label: 'Sent', cls: 'bg-blue-100 text-blue-700' },
+  delivered: { label: 'Delivered', cls: 'bg-emerald-100 text-emerald-700' },
+  read: { label: 'Read', cls: 'bg-teal-100 text-teal-700' },
+  failed: { label: 'Failed', cls: 'bg-red-100 text-red-700' },
+  skipped: { label: 'Not sent', cls: 'bg-amber-100 text-amber-700' },
+};
+
+function DeliveryIcon({ status }: { status: WhatsAppMessage['status'] }) {
+  if (status === 'read' || status === 'delivered') return <CheckCheck className="h-3 w-3" />;
+  if (status === 'sent') return <Check className="h-3 w-3" />;
+  if (status === 'failed') return <AlertTriangle className="h-3 w-3" />;
+  if (status === 'skipped') return <Ban className="h-3 w-3" />;
+  return <Clock className="h-3 w-3" />;
+}
+
+const formatDateTime = (iso: string) =>
+  new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 
 export default function ApplicationDetailPage() {
   const params = useParams();
@@ -61,6 +87,9 @@ export default function ApplicationDetailPage() {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [statusConfirm, setStatusConfirm] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState(false);
+  const [notifyCandidate, setNotifyCandidate] = useState(true);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [resending, setResending] = useState(false);
 
   const handleCopyId = async () => {
     if (!app) return;
@@ -81,12 +110,41 @@ export default function ApplicationDetailPage() {
 
   const handleStatusChange = async (status: string) => {
     if (!app) return;
+    setUpdatingStatus(true);
     try {
-      const updated = await updateApplicationStatus(app._id, status);
+      const send = notifyCandidate && status !== 'received';
+      const updated = await updateApplicationStatus(app._id, status, send);
       setApp({ ...app, status: updated.status });
       setStatusConfirm(null);
+      reportNotification(updated.notification);
+      await load(); // pick up the new message log entry
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to update status');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const reportNotification = (n?: WhatsAppMessage | null) => {
+    if (!n) return;
+    if (n.status === 'failed') toast.error(`Status updated, but the WhatsApp message failed: ${n.error ?? 'unknown error'}`);
+    else if (n.status === 'skipped') toast.info(`Status updated. WhatsApp message not sent: ${n.error ?? 'skipped'}`);
+    else toast.success('Status updated and WhatsApp message sent to the candidate');
+  };
+
+  const handleResend = async () => {
+    if (!app) return;
+    setResending(true);
+    try {
+      const res = await resendApplicationNotification(app._id);
+      setApp({ ...app, whatsappMessages: res.whatsappMessages });
+      if (res.notification?.status === 'failed') toast.error(`WhatsApp message failed: ${res.notification.error ?? 'unknown error'}`);
+      else if (res.notification?.status === 'skipped') toast.info(`Not sent: ${res.notification.error ?? 'skipped'}`);
+      else toast.success('WhatsApp message re-sent');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to resend message');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -364,6 +422,48 @@ export default function ApplicationDetailPage() {
             </div>
           </motion.div>
 
+          {/* WhatsApp messages */}
+          <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 }} className="rounded-2xl border border-hairline bg-white p-6 shadow-soft">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
+                <MessageCircle className="h-5 w-5 text-emerald-500" /> WhatsApp Messages
+              </h2>
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={resending}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-navy/5 px-3 py-2 text-xs font-semibold text-navy transition-colors hover:bg-navy/10 disabled:opacity-50"
+                title="Re-send the message for the current status"
+              >
+                <RotateCw className={`h-3.5 w-3.5 ${resending ? 'animate-spin' : ''}`} /> Resend
+              </button>
+            </div>
+            {(!app.whatsappMessages || app.whatsappMessages.length === 0) ? (
+              <p className="mt-3 text-sm text-gray-500">No messages sent to this candidate yet.</p>
+            ) : (
+              <ul className="mt-4 space-y-3">
+                {[...app.whatsappMessages].reverse().map((m) => {
+                  const st = deliveryStyles[m.status];
+                  const about = m.kind === 'received'
+                    ? 'Application received'
+                    : `Status: ${statuses.find((s) => s.value === m.applicationStatus)?.label ?? m.applicationStatus}`;
+                  return (
+                    <li key={m._id} className="border-l-2 border-ocean/25 pl-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-navy">{about}</p>
+                        <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${st.cls}`}>
+                          <DeliveryIcon status={m.status} /> {st.label}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-xs text-gray-500">{formatDateTime(m.createdAt)}</p>
+                      {m.error && <p className="mt-1 text-xs text-red-600">{m.error}</p>}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </motion.div>
+
           {/* Actions */}
           <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-hairline bg-white p-6 shadow-soft">
             <h2 className="text-base font-bold text-gray-900">Actions</h2>
@@ -389,9 +489,23 @@ export default function ApplicationDetailPage() {
           Are you sure you want to change the status to{' '}
           <strong className="text-navy">{statuses.find((s) => s.value === statusConfirm)?.label}</strong>?
         </p>
+        {statusConfirm !== 'received' && (
+          <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl bg-emerald-50 p-3.5 text-sm text-emerald-900">
+            <input
+              type="checkbox"
+              checked={notifyCandidate}
+              onChange={(e) => setNotifyCandidate(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500"
+            />
+            <span>
+              <span className="flex items-center gap-1.5 font-semibold"><MessageCircle className="h-4 w-4" /> Notify candidate on WhatsApp</span>
+              <span className="mt-0.5 block text-xs text-emerald-800/80">Sends the status update to {app.phone || 'the candidate'}.</span>
+            </span>
+          </label>
+        )}
         <div className="mt-6 flex justify-end gap-3">
           <Button variant="ghost" onClick={() => setStatusConfirm(null)}>Cancel</Button>
-          <Button onClick={() => statusConfirm && handleStatusChange(statusConfirm)}>Confirm</Button>
+          <Button loading={updatingStatus} onClick={() => statusConfirm && handleStatusChange(statusConfirm)}>Confirm</Button>
         </div>
       </Modal>
 

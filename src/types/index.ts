@@ -34,6 +34,26 @@ export interface ApplicationNote {
   createdAt: string;
 }
 
+export type WhatsAppDeliveryStatus =
+  | "submitted"
+  | "sent"
+  | "delivered"
+  | "read"
+  | "failed"
+  | "skipped";
+
+export interface WhatsAppMessage {
+  _id: string;
+  kind: "received" | "status";
+  applicationStatus?: string;
+  to?: string;
+  messageId?: string;
+  status: WhatsAppDeliveryStatus;
+  error?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Application {
   _id: string;
   job: Job | string;
@@ -68,6 +88,7 @@ export interface Application {
     | "selected"
     | "rejected";
   notes: ApplicationNote[];
+  whatsappMessages?: WhatsAppMessage[];
   createdAt: string;
   updatedAt: string;
 }

@@ -4,6 +4,7 @@ import type {
   JobsResponse,
   Application,
   ApplicationsResponse,
+  WhatsAppMessage,
   Department,
   DashboardStats,
   AdminUser,
@@ -105,11 +106,22 @@ export async function getAdminApplication(
 
 export async function updateApplicationStatus(
   id: string,
-  status: string
-): Promise<Application> {
+  status: string,
+  notify = true
+): Promise<Application & { notification?: WhatsAppMessage | null }> {
   const { data } = await api.patch(`/applications/${id}/status`, {
     status,
+    notify,
   });
+  return data;
+}
+
+/** Re-send the WhatsApp message that matches the application's current status. */
+export async function resendApplicationNotification(id: string): Promise<{
+  notification: WhatsAppMessage | null;
+  whatsappMessages: WhatsAppMessage[];
+}> {
+  const { data } = await api.post(`/applications/${id}/notify`);
   return data;
 }
 
