@@ -2,7 +2,8 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import BackToTop from '@/components/layout/BackToTop';
-import { Mail, Globe, MapPin, Phone, ArrowUpRight, Navigation } from 'lucide-react';
+import { Mail, Globe, MapPin, Phone, ArrowUpRight, Navigation, Linkedin } from 'lucide-react';
+import { HR_CONTACT } from '@/lib/contact';
 
 const footerLinks = {
   explore: [
@@ -12,7 +13,8 @@ const footerLinks = {
   ],
   connect: [
     { href: 'https://harekrishnavizag.org', label: 'Main Website', external: true },
-    { href: 'mailto:careers@harekrishnavizag.org', label: 'Email Us', external: true },
+    { href: HR_CONTACT.linkedin, label: 'LinkedIn', external: true },
+    { href: `mailto:${HR_CONTACT.email}`, label: 'Email Us', external: true },
   ],
 };
 
@@ -20,8 +22,8 @@ const ADDRESS = {
   line1: 'Hare Krishna Vaikuntham Cultural Centre',
   line2: 'IIM Road, opp. Akshaya Patra Foundation, Gambhiram',
   city: 'Visakhapatnam, Andhra Pradesh 530052',
-  phone: '+91 89777 61187',
-  phoneHref: 'tel:+918977761187',
+  phone: HR_CONTACT.phone,
+  phoneHref: HR_CONTACT.phoneHref,
   mapsUrl: 'https://www.google.com/maps/search/?api=1&query=Hare+Krishna+Vaikuntham+Cultural+Centre+Gambhiram+Visakhapatnam',
   // Keyless Google Maps embed for the temple location.
   mapEmbed:
@@ -79,6 +81,13 @@ export default function Footer() {
                     <Phone className="h-3.5 w-3.5" />
                     {ADDRESS.phone}
                   </a>
+                  <a
+                    href={`mailto:${HR_CONTACT.email}`}
+                    className="mt-1 flex items-center gap-1.5 text-sm font-medium text-ocean transition-colors hover:text-navy [overflow-wrap:anywhere]"
+                  >
+                    <Mail className="h-3.5 w-3.5 shrink-0" />
+                    {HR_CONTACT.email}
+                  </a>
                   <div className="mt-3">
                     <a
                       href={ADDRESS.mapsUrl}
@@ -105,8 +114,17 @@ export default function Footer() {
                 <Globe className="h-4 w-4" />
               </a>
               <a
-                href="mailto:careers@harekrishnavizag.org"
-                aria-label="Email our careers team"
+                href={HR_CONTACT.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Follow us on LinkedIn"
+                className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-gray-500 shadow-sm ring-1 ring-hairline transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#0a66c2]/10 hover:text-[#0a66c2] focus:outline-none focus-visible:ring-2 focus-visible:ring-ocean"
+              >
+                <Linkedin className="h-4 w-4" />
+              </a>
+              <a
+                href={`mailto:${HR_CONTACT.email}`}
+                aria-label="Email our HR team"
                 className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-gray-500 shadow-sm ring-1 ring-hairline transition-all duration-300 hover:-translate-y-0.5 hover:bg-ocean/10 hover:text-ocean focus:outline-none focus-visible:ring-2 focus-visible:ring-ocean"
               >
                 <Mail className="h-4 w-4" />

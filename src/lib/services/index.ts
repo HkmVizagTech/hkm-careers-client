@@ -90,6 +90,7 @@ export async function trackApplication(id: string): Promise<{
   job: { title: string; location: string; type: string } | null;
   status: string;
   appliedAt: string;
+  interview?: { scheduledAt: string; mode: "in-person" | "phone" | "video"; location: string } | null;
 }> {
   const { data } = await api.get(`/applications/track/${id}`);
   return data;

@@ -92,14 +92,15 @@ export default function Header() {
           >
             {/* Logo */}
             <Link href="/" className="group flex min-w-0 items-center gap-2.5">
+              {/* White-text logo: sits directly on the navy bar, no white box needed. */}
               <Image
-                src="https://pub-4e0da5167b73428c8f43c54f8376882d.r2.dev/logo/hkm%20logo%20png%20sp%20colored%20-%20black%20font.png"
-                alt="Hare Krishna Movement Vizag"
-                width={200}
-                height={56}
+                src="/brand/hkm-logo-white.png"
+                alt="Srila Prabhupada's Hare Krishna Movement Visakhapatnam"
+                width={445}
+                height={240}
                 className={cn(
-                  'w-auto rounded-lg bg-white object-contain p-1 shadow-sm transition-all duration-500 group-hover:scale-105',
-                  scrolled ? 'h-8 sm:h-9' : 'h-10 sm:h-11'
+                  'w-auto object-contain transition-all duration-500 group-hover:scale-105',
+                  scrolled ? 'h-10 sm:h-11' : 'h-12 sm:h-14'
                 )}
                 priority
               />
@@ -109,11 +110,9 @@ export default function Header() {
                   scrolled ? 'max-w-0 opacity-0 xl:max-w-[14rem] xl:opacity-100' : 'max-w-[14rem] opacity-100'
                 )}
               >
-                <p className="whitespace-nowrap text-[13px] font-bold leading-tight tracking-tight text-white">
-                  Hare Krishna Movement
-                </p>
-                <p className="whitespace-nowrap text-[11px] font-medium uppercase tracking-widest text-cyan">
-                  Visakhapatnam
+                {/* The logo already carries the name; this just labels the site. */}
+                <p className="whitespace-nowrap border-l border-white/25 pl-2.5 text-[11px] font-bold uppercase tracking-[0.2em] text-cyan">
+                  Careers
                 </p>
               </div>
             </Link>

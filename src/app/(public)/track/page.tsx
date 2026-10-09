@@ -19,7 +19,12 @@ import {
   MessageSquare,
   Trophy,
   ArrowRight,
+  CalendarClock,
+  Video,
+  Phone,
+  ExternalLink,
 } from 'lucide-react';
+import { HR_CONTACT } from '@/lib/contact';
 import { trackApplication } from '@/lib/services';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -31,7 +36,91 @@ type TrackedApplication = {
   job: { title: string; location: string; type: string } | null;
   status: string;
   appliedAt: string;
+  interview?: { scheduledAt: string; mode: 'in-person' | 'phone' | 'video'; location: string } | null;
 };
+
+const MODE_LABEL = { 'in-person': 'In person', phone: 'Phone call', video: 'Video call' } as const;
+
+const formatInterview = (iso: string) =>
+  new Date(iso).toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+
+/** Venue text with any URL (Maps / meeting link) turned into a link. */
+function LinkifiedText({ text }: { text: string }) {
+  const parts = text.split(/(https?:\/\/\S+)/g);
+  return (
+    <>
+      {parts.map((part, i) =>
+        /^https?:\/\//.test(part) ? (
+          <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="font-semibold text-ocean underline-offset-2 hover:underline [overflow-wrap:anywhere]">
+            {part}
+          </a>
+        ) : (
+          <span key={i}>{part}</span>
+        ),
+      )}
+    </>
+  );
+}
+
+function InterviewDetails({ interview }: { interview: NonNullable<TrackedApplication['interview']> }) {
+  const url = interview.location.match(/https?:\/\/\S+/)?.[0];
+  const isVideo = interview.mode === 'video';
+  const ModeIcon = isVideo ? Video : interview.mode === 'phone' ? Phone : MapPin;
+  const label = isVideo ? 'Meeting link' : interview.mode === 'phone' ? 'Details' : 'Venue';
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.25 }}
+      className="mb-8 overflow-hidden rounded-2xl border border-plum/20 bg-gradient-to-br from-plum/[0.06] to-ocean/[0.04]"
+    >
+      <div className="flex items-center gap-2 border-b border-plum/10 px-5 py-3">
+        <CalendarClock className="h-4 w-4 text-plum" />
+        <p className="text-sm font-bold text-navy">Your interview</p>
+      </div>
+      <dl className="space-y-3 px-5 py-4 text-sm">
+        <div>
+          <dt className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Date &amp; time</dt>
+          <dd className="mt-0.5 font-semibold text-navy">{formatInterview(interview.scheduledAt)} (IST)</dd>
+        </div>
+        <div>
+          <dt className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Mode</dt>
+          <dd className="mt-0.5 flex items-center gap-1.5 font-semibold text-navy">
+            <ModeIcon className="h-4 w-4 text-plum" /> {MODE_LABEL[interview.mode] || 'In person'}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">{label}</dt>
+          <dd className="mt-0.5 text-gray-700">
+            {interview.location ? <LinkifiedText text={interview.location} /> : 'HR will share the details with you'}
+          </dd>
+        </div>
+      </dl>
+      {url && (
+        <div className="px-5 pb-5">
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-navy to-ocean px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-navy/20 transition-all hover:shadow-lg"
+          >
+            {isVideo ? <Video className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}
+            {isVideo ? 'Join meeting' : 'Open in Google Maps'}
+          </a>
+        </div>
+      )}
+    </motion.div>
+  );
+}
 
 const steps = [
   { key: 'received', label: 'Received', icon: ClipboardList },
@@ -279,6 +368,8 @@ export default function TrackPage() {
                 {/* Divider */}
                 <div className="my-8 border-t border-gray-200" />
 
+                {result.interview && <InterviewDetails interview={result.interview} />}
+
                 {/* Status Section */}
                 <div className="mb-4">
                   <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Application Status</p>
@@ -463,6 +554,16 @@ export default function TrackPage() {
               </div>
             </div>
           </motion.div>
+        )}
+
+        {/* Contact HR, once a result is shown */}
+        {!loading && result && (
+          <p className="mx-auto mt-6 max-w-3xl px-4 text-center text-sm text-gray-500 sm:px-6 lg:px-8">
+            Questions about your application? Contact HR at{' '}
+            <a href={`mailto:${HR_CONTACT.email}`} className="font-semibold text-ocean hover:text-navy">{HR_CONTACT.email}</a>
+            {' '}or{' '}
+            <a href={HR_CONTACT.phoneHref} className="font-semibold text-ocean hover:text-navy whitespace-nowrap">{HR_CONTACT.phone}</a>.
+          </p>
         )}
 
         {/* Helpful hint when nothing is searched yet */}

@@ -51,13 +51,11 @@ export default function AdminLoginPage() {
       >
         <div className="rounded-3xl border border-white/15 bg-white/10 p-7 shadow-2xl shadow-black/20 backdrop-blur-xl sm:p-8">
           <div className="text-center">
-            <div className="mx-auto flex h-16 w-48 items-center justify-center rounded-2xl bg-white p-2 shadow-lg">
-              <img
-                src="https://pub-4e0da5167b73428c8f43c54f8376882d.r2.dev/logo/hkm%20logo%20png%20sp%20colored%20-%20black%20font.png"
-                alt="HKM Vizag"
-                className="h-full w-auto object-contain"
-              />
-            </div>
+            <img
+              src="/brand/hkm-logo-white.png"
+              alt="Srila Prabhupada's Hare Krishna Movement Visakhapatnam"
+              className="mx-auto h-20 w-auto object-contain"
+            />
             <h1 className="mt-5 text-xl font-bold text-white">Welcome Back</h1>
             <p className="mt-1 text-sm text-white/70">
               Sign in to the admin panel
