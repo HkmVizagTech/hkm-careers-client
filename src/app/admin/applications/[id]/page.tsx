@@ -48,7 +48,9 @@ import ResumeActions from '@/components/admin/ResumeActions';
 import CloseRemainingModal from '@/components/admin/CloseRemainingModal';
 
 import { formatDate } from '@/lib/utils';
-import type { Application, RoleFilled, WhatsAppMessage } from '@/types';
+import type { Application, CandidateNotification, RoleFilled, WhatsAppMessage } from '@/types';
+import { reportDelivery } from '@/lib/notify';
+import EmailsCard from '@/components/admin/EmailsCard';
 
 const statuses = [
   { value: 'received', label: 'Received', color: 'bg-gray-100 text-gray-700' },
@@ -135,11 +137,9 @@ export default function ApplicationDetailPage() {
     }
   };
 
-  const reportNotification = (n?: WhatsAppMessage | null) => {
-    if (!n) return;
-    if (n.status === 'failed') toast.error(`Status updated, but the WhatsApp message failed: ${n.error ?? 'unknown error'}`);
-    else if (n.status === 'skipped') toast.info(`Status updated. WhatsApp message not sent: ${n.error ?? 'skipped'}`);
-    else toast.success('Status updated and WhatsApp message sent to the candidate');
+  const reportNotification = (n?: CandidateNotification | null) => {
+    if (!n) return toast.success('Status updated');
+    reportDelivery(n, 'Status updated');
   };
 
   const handleResend = async () => {
@@ -148,9 +148,8 @@ export default function ApplicationDetailPage() {
     try {
       const res = await resendApplicationNotification(app._id);
       setApp({ ...app, whatsappMessages: res.whatsappMessages });
-      if (res.notification?.status === 'failed') toast.error(`WhatsApp message failed: ${res.notification.error ?? 'unknown error'}`);
-      else if (res.notification?.status === 'skipped') toast.info(`Not sent: ${res.notification.error ?? 'skipped'}`);
-      else toast.success('WhatsApp message re-sent');
+      reportDelivery(res.notification, 'Re-sent');
+      load(); // picks up the new email log entry
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to resend message');
     } finally {
@@ -448,6 +447,13 @@ export default function ApplicationDetailPage() {
             onChange={(followUps) => setApp((a) => (a ? { ...a, followUps } : a))}
           />
 
+          <EmailsCard
+            applicationId={app._id}
+            candidateEmail={app.email}
+            emails={app.emails || []}
+            onChange={(emails) => setApp((a) => (a ? { ...a, emails } : a))}
+          />
+
           {/* WhatsApp messages */}
           <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 }} className="rounded-2xl border border-hairline bg-white p-6 shadow-soft">
             <div className="flex items-center justify-between gap-3">
@@ -523,8 +529,8 @@ export default function ApplicationDetailPage() {
               className="mt-0.5 h-4 w-4 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500"
             />
             <span>
-              <span className="flex items-center gap-1.5 font-semibold"><MessageCircle className="h-4 w-4" /> Notify candidate on WhatsApp</span>
-              <span className="mt-0.5 block text-xs text-emerald-800/80">Sends the status update to {app.phone || 'the candidate'}.</span>
+              <span className="flex items-center gap-1.5 font-semibold"><MessageCircle className="h-4 w-4" /> Notify candidate (WhatsApp + email)</span>
+              <span className="mt-0.5 block text-xs text-emerald-800/80">Sends the status update to {app.phone || 'their phone'} and {app.email}.</span>
             </span>
           </label>
         )}

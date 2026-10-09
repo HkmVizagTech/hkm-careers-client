@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/Button';
 import { clearInterview, resendInterviewNotification, scheduleInterview } from '@/lib/services';
 import { toast } from '@/lib/toast';
 import { formatDateTime, toDateTimeLocal } from '@/lib/utils';
-import type { Interview, InterviewMode, WhatsAppMessage } from '@/types';
+import type { CandidateNotification, Interview, InterviewMode } from '@/types';
+import { reportDelivery } from '@/lib/notify';
 
 const MODES: { value: InterviewMode; label: string; icon: typeof Video }[] = [
   { value: 'in-person', label: 'In person', icon: MapPin },
@@ -17,6 +18,15 @@ const MODES: { value: InterviewMode; label: string; icon: typeof Video }[] = [
 
 const inputCls =
   'w-full rounded-xl border border-gray-200 bg-background px-3.5 py-2.5 text-sm focus:border-ocean focus:outline-none focus:ring-4 focus:ring-ocean/15';
+
+/** Pre-filled for in-person interviews; HR can change it per interview. */
+const DEFAULT_VENUE =
+  process.env.NEXT_PUBLIC_INTERVIEW_VENUE || 'Chaitanya Bhavan https://maps.app.goo.gl/tJJJoy8BXHcLBBrB9';
+const LATER = 'HR will share the details with you';
+
+/** Same line the server sends as {{5}} in the WhatsApp template. */
+const whereLine = (mode: InterviewMode, location: string) =>
+  `${mode === 'video' ? 'Meeting link' : mode === 'phone' ? 'Details' : 'Venue'}: ${location.trim() || LATER}`;
 
 const isUrl = (s?: string) => !!s && /^https?:\/\//i.test(s.trim());
 
@@ -47,11 +57,8 @@ interface Props {
   startEditing?: boolean;
 }
 
-function reportMessage(n: WhatsAppMessage | null | undefined, savedText: string) {
-  if (!n) return toast.success(savedText);
-  if (n.status === 'failed') toast.error(`${savedText}, but the WhatsApp failed: ${n.error ?? 'unknown error'}`);
-  else if (n.status === 'skipped') toast.info(`${savedText}. WhatsApp not sent: ${n.error ?? 'skipped'}`);
-  else toast.success(`${savedText} and the candidate was sent the details on WhatsApp`);
+function reportMessage(n: CandidateNotification | null | undefined, savedText: string) {
+  reportDelivery(n, savedText);
 }
 
 export default function InterviewCard({ applicationId, candidateName, jobTitle, interview, onChange, onMessage, startEditing }: Props) {
@@ -63,12 +70,15 @@ export default function InterviewCard({ applicationId, candidateName, jobTitle, 
   const [location, setLocation] = useState('');
   const [notes, setNotes] = useState('');
   const [notify, setNotify] = useState(true);
+  const [shareLater, setShareLater] = useState(false);
   const [resending, setResending] = useState(false);
 
   const openForm = () => {
     setWhen(scheduled ? toDateTimeLocal(scheduled.scheduledAt) : '');
     setMode(scheduled?.mode || 'in-person');
-    setLocation(scheduled?.location || '');
+    // New in-person interviews start with the usual venue filled in.
+    setLocation(scheduled ? scheduled.location || '' : DEFAULT_VENUE);
+    setShareLater(!!scheduled && !scheduled.location);
     setNotes(scheduled?.notes || '');
     setNotify(true);
     setEditing(true);
@@ -78,8 +88,19 @@ export default function InterviewCard({ applicationId, candidateName, jobTitle, 
     if (startEditing && !scheduled) openForm();
   }, [startEditing]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /** Switching mode keeps the venue/link sensible for that mode. */
+  const changeMode = (next: InterviewMode) => {
+    setMode(next);
+    if (shareLater) return;
+    if (next === 'in-person' && (!location.trim() || isUrl(location))) setLocation(DEFAULT_VENUE);
+    else if (next !== 'in-person' && location === DEFAULT_VENUE) setLocation('');
+  };
+
   const save = async () => {
     if (!when) return toast.error('Choose the interview date and time');
+    if (mode === 'video' && !shareLater && !location.trim()) {
+      return toast.error('Add the meeting link, or tick "Share later"');
+    }
     const at = new Date(when);
     if (Number.isNaN(at.getTime())) return toast.error('Invalid date');
     setSaving(true);
@@ -87,7 +108,7 @@ export default function InterviewCard({ applicationId, candidateName, jobTitle, 
       const res = await scheduleInterview(applicationId, {
         scheduledAt: at.toISOString(),
         mode,
-        location: location.trim(),
+        location: shareLater ? '' : location.trim(),
         notes: notes.trim(),
         notify,
       });
@@ -170,7 +191,7 @@ export default function InterviewCard({ applicationId, candidateName, jobTitle, 
                   <button
                     key={m.value}
                     type="button"
-                    onClick={() => setMode(m.value)}
+                    onClick={() => changeMode(m.value)}
                     aria-pressed={active}
                     className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-2 text-[11px] font-semibold transition-colors ${
                       active ? 'border-plum/40 bg-plum/10 text-plum' : 'border-gray-200 text-gray-500 hover:bg-gray-50'
@@ -182,18 +203,46 @@ export default function InterviewCard({ applicationId, candidateName, jobTitle, 
               })}
             </div>
           </div>
-          <label className="block">
-            <span className="mb-1 block text-xs font-semibold text-gray-600">
-              {mode === 'video' ? 'Meeting link' : mode === 'phone' ? 'Who calls whom (optional)' : 'Venue'}
-            </span>
+          <div>
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-gray-600">
+                {mode === 'video' ? 'Meeting link' : mode === 'phone' ? 'Call details (optional)' : 'Venue'}
+              </span>
+              {mode === 'in-person' && !shareLater && location !== DEFAULT_VENUE && (
+                <button type="button" onClick={() => setLocation(DEFAULT_VENUE)} className="text-[11px] font-semibold text-ocean hover:text-navy">
+                  Use Chaitanya Bhavan
+                </button>
+              )}
+            </div>
             <input
               type="text"
-              value={location}
+              value={shareLater ? '' : location}
+              disabled={shareLater}
               onChange={(e) => setLocation(e.target.value)}
-              placeholder={mode === 'video' ? 'https://meet.google.com/…' : mode === 'phone' ? 'HR will call the candidate' : 'HKM Vizag temple office'}
-              className={inputCls}
+              placeholder={
+                shareLater
+                  ? 'Will be shared later'
+                  : mode === 'video'
+                    ? 'https://meet.google.com/…'
+                    : mode === 'phone'
+                      ? 'e.g. HR will call you on your registered number'
+                      : 'Venue name and Google Maps link'
+              }
+              className={`${inputCls} disabled:bg-gray-100 disabled:text-gray-400`}
             />
-          </label>
+            <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs text-gray-600">
+              <input
+                type="checkbox"
+                checked={shareLater}
+                onChange={(e) => setShareLater(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-gray-300 text-plum focus:ring-plum"
+              />
+              Share {mode === 'video' ? 'the link' : 'the details'} later
+            </label>
+            <p className="mt-2 rounded-lg bg-gray-50 px-3 py-2 text-[11px] leading-relaxed text-gray-500">
+              Candidate sees: <span className="font-semibold text-gray-700 [overflow-wrap:anywhere]">{whereLine(mode, shareLater ? '' : location)}</span>
+            </p>
+          </div>
           <label className="block">
             <span className="mb-1 block text-xs font-semibold text-gray-600">Notes for the panel (optional)</span>
             <textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} className={`${inputCls} resize-none`} />
@@ -206,8 +255,8 @@ export default function InterviewCard({ applicationId, candidateName, jobTitle, 
               className="mt-0.5 h-4 w-4 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500"
             />
             <span>
-              <span className="font-semibold">Send WhatsApp to the candidate</span>
-              <span className="block text-emerald-800/80">Date, time, mode and venue/link, with their tracking button.</span>
+              <span className="font-semibold">Notify the candidate (WhatsApp + email)</span>
+              <span className="block text-emerald-800/80">Date, time, mode and venue/link. The email includes an &quot;Add to calendar&quot; link.</span>
             </span>
           </label>
           <div className="flex gap-2 pt-1">
@@ -263,7 +312,7 @@ export default function InterviewCard({ applicationId, candidateName, jobTitle, 
               disabled={resending}
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-900 disabled:opacity-50"
             >
-              <Send className={`h-3.5 w-3.5 ${resending ? 'animate-pulse' : ''}`} /> Send details on WhatsApp
+              <Send className={`h-3.5 w-3.5 ${resending ? 'animate-pulse' : ''}`} /> Send details again
             </button>
             <a
               href={calendarLink(scheduled, candidateName, jobTitle)}

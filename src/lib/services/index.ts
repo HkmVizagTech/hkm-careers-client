@@ -15,6 +15,9 @@ import type {
   FollowUp,
   RoleFilled,
   JobPipeline,
+  EmailLog,
+  MailStatus,
+  CandidateNotification,
 } from "@/types";
 
 export async function getPublicJobs(params?: {
@@ -115,7 +118,7 @@ export async function updateApplicationStatus(
   id: string,
   status: string,
   notify = true
-): Promise<Application & { notification?: WhatsAppMessage | null; roleFilled?: RoleFilled | null }> {
+): Promise<Application & { notification?: CandidateNotification | null; roleFilled?: RoleFilled | null }> {
   const { data } = await api.patch(`/applications/${id}/status`, {
     status,
     notify,
@@ -125,7 +128,7 @@ export async function updateApplicationStatus(
 
 /** Re-send the WhatsApp message that matches the application's current status. */
 export async function resendApplicationNotification(id: string): Promise<{
-  notification: WhatsAppMessage | null;
+  notification: CandidateNotification | null;
   whatsappMessages: WhatsAppMessage[];
 }> {
   const { data } = await api.post(`/applications/${id}/notify`);
@@ -238,14 +241,14 @@ export async function getAttentionSummary(): Promise<AttentionSummary> {
 export async function scheduleInterview(
   id: string,
   interview: { scheduledAt: string; mode?: string; location?: string; notes?: string; notify?: boolean }
-): Promise<{ interview: Interview; notification: WhatsAppMessage | null }> {
+): Promise<{ interview: Interview; notification: CandidateNotification | null }> {
   const { data } = await api.put(`/applications/${id}/interview`, interview);
   return data;
 }
 
 /** Re-send the interview date/time WhatsApp. */
 export async function resendInterviewNotification(id: string): Promise<{
-  notification: WhatsAppMessage | null;
+  notification: CandidateNotification | null;
   whatsappMessages: WhatsAppMessage[];
 }> {
   const { data } = await api.post(`/applications/${id}/interview/notify`);
@@ -383,5 +386,31 @@ export async function viewResume(id: string, resumeUrl: string): Promise<void> {
   } catch (err) {
     win?.close();
     throw err;
+  }
+}
+
+// ---------------------------------------------------------------- email
+
+/** Admin-written email to the candidate. */
+export async function sendApplicationEmail(
+  id: string,
+  input: { subject: string; message: string }
+): Promise<{ email: EmailLog; emails: EmailLog[] }> {
+  const { data } = await api.post(`/applications/${id}/email`, input);
+  return data;
+}
+
+export async function getMailStatus(): Promise<MailStatus> {
+  const { data } = await api.get("/mail/status");
+  return data;
+}
+
+export async function sendTestEmail(to?: string): Promise<{ ok: boolean; error?: string; to: string; via?: string }> {
+  try {
+    const { data } = await api.post("/mail/test", to ? { to } : {});
+    return data;
+  } catch (err) {
+    const e = err as { response?: { data?: { error?: string; to?: string } } };
+    return { ok: false, error: e.response?.data?.error || "Could not send", to: e.response?.data?.to || to || "" };
   }
 }

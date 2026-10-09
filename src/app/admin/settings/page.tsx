@@ -29,6 +29,7 @@ import { toast } from '@/lib/toast';
 
 import { formatDate } from '@/lib/utils';
 import type { AdminUser } from '@/types';
+import EmailSettingsCard from '@/components/admin/EmailSettingsCard';
 
 const inputClass =
   'w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm transition-all focus:border-ocean focus:bg-white focus:outline-none focus:ring-4 focus:ring-ocean/15';
@@ -264,6 +265,8 @@ export default function SettingsPage() {
             </ul>
           )}
         </div>
+
+        <EmailSettingsCard defaultTo={user?.email} />
 
         {/* Security Info */}
         <div className="rounded-2xl border border-hairline bg-white p-6 shadow-soft">

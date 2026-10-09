@@ -131,6 +131,32 @@ export interface AttentionSummary {
   }[];
 }
 
+export type EmailKind = "received" | "status" | "interview" | "custom" | "hr-new-application";
+
+export interface EmailLog {
+  _id: string;
+  kind: EmailKind;
+  applicationStatus?: string;
+  to?: string;
+  subject?: string;
+  body?: string;
+  status: "sent" | "failed" | "skipped";
+  error?: string;
+  sentBy?: { _id: string; name: string } | string | null;
+  createdAt: string;
+}
+
+/** Result of a WhatsApp attempt, with the matching email attempt attached. */
+export type CandidateNotification = WhatsAppMessage & { email?: Pick<EmailLog, "status" | "error"> };
+
+export interface MailStatus {
+  configured: boolean;
+  via: "gmail-api" | "smtp" | null;
+  from: string | null;
+  replyTo: string | null;
+  hrRecipients: string[];
+}
+
 export interface Application {
   _id: string;
   applicationNumber?: string;
@@ -167,6 +193,7 @@ export interface Application {
     | "rejected";
   notes: ApplicationNote[];
   whatsappMessages?: WhatsAppMessage[];
+  emails?: EmailLog[];
   interview?: Interview | null;
   followUps?: FollowUp[];
   /** Where the applicant found the job: linkedin, indeed, whatsapp... */
