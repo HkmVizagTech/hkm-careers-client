@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   motion,
@@ -92,17 +91,19 @@ export default function Header() {
           >
             {/* Logo */}
             <Link href="/" className="group flex min-w-0 items-center gap-2.5">
-              {/* White-text logo: sits directly on the navy bar, no white box needed. */}
-              <Image
+              {/* White-text logo on the navy bar. Plain <img> (not next/image) so the browser always gets
+                  the full-resolution file; re-compression made the small text blurry. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src="/brand/hkm-logo-white.png"
                 alt="Srila Prabhupada's Hare Krishna Movement Visakhapatnam"
                 width={445}
                 height={240}
+                fetchPriority="high"
                 className={cn(
                   'w-auto object-contain transition-all duration-500 group-hover:scale-105',
-                  scrolled ? 'h-10 sm:h-11' : 'h-12 sm:h-14'
+                  scrolled ? 'h-11 sm:h-12' : 'h-14 sm:h-16'
                 )}
-                priority
               />
               <div
                 className={cn(

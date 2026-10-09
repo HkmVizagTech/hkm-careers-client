@@ -38,7 +38,7 @@ function SidebarContent({ pathname, onNavigate }: { pathname: string; onNavigate
       {/* Logo */}
       <div className="flex items-center justify-between px-6 py-5">
         <div className="flex items-center gap-3">
-          <img src="/brand/hkm-logo-white.png" alt="HKM Vizag" className="h-10 w-auto object-contain" />
+          <img src="/brand/hkm-logo-white.png" alt="HKM Vizag" className="h-12 w-auto object-contain" />
           <span className="text-[11px] font-bold uppercase tracking-widest text-cyan">Careers Admin</span>
         </div>
         {onNavigate && (

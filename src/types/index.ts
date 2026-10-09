@@ -63,6 +63,11 @@ export type InterviewMode = "in-person" | "phone" | "video";
 export interface Interview {
   scheduledAt: string;
   mode?: InterviewMode;
+  /** Venue name (in person) or call details (phone) */
+  venue?: string;
+  /** Google Maps link (in person) or meeting link (video) */
+  link?: string;
+  /** Older interviews: venue + link in one text */
   location?: string;
   notes?: string;
 }

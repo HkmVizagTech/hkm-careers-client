@@ -19,16 +19,26 @@ const MODES: { value: InterviewMode; label: string; icon: typeof Video }[] = [
 const inputCls =
   'w-full rounded-xl border border-gray-200 bg-background px-3.5 py-2.5 text-sm focus:border-ocean focus:outline-none focus:ring-4 focus:ring-ocean/15';
 
-/** Pre-filled for in-person interviews; HR can change it per interview. */
-const DEFAULT_VENUE =
-  process.env.NEXT_PUBLIC_INTERVIEW_VENUE || 'Chaitanya Bhavan https://maps.app.goo.gl/tJJJoy8BXHcLBBrB9';
+/** Pre-filled for in-person interviews; HR can change them per interview. */
+const DEFAULT_VENUE = process.env.NEXT_PUBLIC_INTERVIEW_VENUE || 'Chaitanya Bhavan';
+const DEFAULT_VENUE_LINK = process.env.NEXT_PUBLIC_INTERVIEW_VENUE_LINK || 'https://maps.app.goo.gl/tJJJoy8BXHcLBBrB9';
 const LATER = 'HR will share the details with you';
 
-/** Same line the server sends as {{5}} in the WhatsApp template. */
-const whereLine = (mode: InterviewMode, location: string) =>
-  `${mode === 'video' ? 'Meeting link' : mode === 'phone' ? 'Details' : 'Venue'}: ${location.trim() || LATER}`;
+/** Venue + link of an interview; older ones stored both in `location`. */
+function placeOf(iv?: Interview | null) {
+  if (!iv) return { venue: '', link: '' };
+  if (iv.venue || iv.link) return { venue: iv.venue || '', link: iv.link || '' };
+  const text = (iv.location || '').trim();
+  const link = text.match(/https?:\/\/\S+/)?.[0] || '';
+  return { venue: text.replace(/https?:\/\/\S+/, '').trim(), link };
+}
 
-const isUrl = (s?: string) => !!s && /^https?:\/\//i.test(s.trim());
+/** Same line the server sends as {{5}} in the WhatsApp template: the link if there is one. */
+const whereLine = (mode: InterviewMode, venue: string, link: string) =>
+  `${mode === 'video' ? 'Meeting link' : mode === 'phone' ? 'Details' : 'Venue'}: ${link.trim() || venue.trim() || LATER}`;
+
+/** Light check before saving; the server does the real validation. */
+const looksLikeLink = (s: string) => /^(https?:\/\/)?[^\s/]+\.[^\s]+$/i.test(s.trim());
 
 /** Google Calendar "add event" link (1 hour slot). */
 function calendarLink(interview: Interview, candidate: string, jobTitle: string) {
@@ -40,7 +50,7 @@ function calendarLink(interview: Interview, candidate: string, jobTitle: string)
     text: `Interview: ${candidate} (${jobTitle})`,
     dates: `${fmt(start)}/${fmt(end)}`,
     details: [interview.notes, typeof window !== 'undefined' ? window.location.href : ''].filter(Boolean).join('\n\n'),
-    location: interview.location || '',
+    location: [placeOf(interview).venue, placeOf(interview).link].filter(Boolean).join(' '),
   });
   return `https://calendar.google.com/calendar/render?${q.toString()}`;
 }
@@ -67,7 +77,8 @@ export default function InterviewCard({ applicationId, candidateName, jobTitle, 
   const [saving, setSaving] = useState(false);
   const [when, setWhen] = useState('');
   const [mode, setMode] = useState<InterviewMode>('in-person');
-  const [location, setLocation] = useState('');
+  const [venue, setVenue] = useState('');
+  const [link, setLink] = useState('');
   const [notes, setNotes] = useState('');
   const [notify, setNotify] = useState(true);
   const [shareLater, setShareLater] = useState(false);
@@ -77,8 +88,11 @@ export default function InterviewCard({ applicationId, candidateName, jobTitle, 
     setWhen(scheduled ? toDateTimeLocal(scheduled.scheduledAt) : '');
     setMode(scheduled?.mode || 'in-person');
     // New in-person interviews start with the usual venue filled in.
-    setLocation(scheduled ? scheduled.location || '' : DEFAULT_VENUE);
-    setShareLater(!!scheduled && !scheduled.location);
+    const place = placeOf(scheduled);
+    // New in-person interviews start with the usual venue and its map link filled in.
+    setVenue(scheduled ? place.venue : DEFAULT_VENUE);
+    setLink(scheduled ? place.link : DEFAULT_VENUE_LINK);
+    setShareLater(!!scheduled && !place.venue && !place.link);
     setNotes(scheduled?.notes || '');
     setNotify(true);
     setEditing(true);
@@ -92,14 +106,23 @@ export default function InterviewCard({ applicationId, candidateName, jobTitle, 
   const changeMode = (next: InterviewMode) => {
     setMode(next);
     if (shareLater) return;
-    if (next === 'in-person' && (!location.trim() || isUrl(location))) setLocation(DEFAULT_VENUE);
-    else if (next !== 'in-person' && location === DEFAULT_VENUE) setLocation('');
+    if (next === 'in-person') {
+      if (!venue.trim()) setVenue(DEFAULT_VENUE);
+      if (!link.trim() || !/maps|goo\.gl/i.test(link)) setLink(DEFAULT_VENUE_LINK);
+    } else {
+      // A map link / venue name doesn't belong to a video or phone interview.
+      if (venue === DEFAULT_VENUE) setVenue('');
+      if (/maps|goo\.gl/i.test(link)) setLink('');
+    }
   };
 
   const save = async () => {
     if (!when) return toast.error('Choose the interview date and time');
-    if (mode === 'video' && !shareLater && !location.trim()) {
+    if (mode === 'video' && !shareLater && !link.trim()) {
       return toast.error('Add the meeting link, or tick "Share later"');
+    }
+    if (!shareLater && link.trim() && !looksLikeLink(link)) {
+      return toast.error('The link does not look right. Paste the full link.');
     }
     const at = new Date(when);
     if (Number.isNaN(at.getTime())) return toast.error('Invalid date');
@@ -108,7 +131,8 @@ export default function InterviewCard({ applicationId, candidateName, jobTitle, 
       const res = await scheduleInterview(applicationId, {
         scheduledAt: at.toISOString(),
         mode,
-        location: shareLater ? '' : location.trim(),
+        venue: shareLater ? '' : venue.trim(),
+        link: shareLater ? '' : link.trim(),
         notes: notes.trim(),
         notify,
       });
@@ -203,44 +227,80 @@ export default function InterviewCard({ applicationId, candidateName, jobTitle, 
               })}
             </div>
           </div>
+          {/* One clear choice instead of a checkbox under filled-in fields. */}
           <div>
-            <div className="mb-1 flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-gray-600">
-                {mode === 'video' ? 'Meeting link' : mode === 'phone' ? 'Call details (optional)' : 'Venue'}
-              </span>
-              {mode === 'in-person' && !shareLater && location !== DEFAULT_VENUE && (
-                <button type="button" onClick={() => setLocation(DEFAULT_VENUE)} className="text-[11px] font-semibold text-ocean hover:text-navy">
-                  Use Chaitanya Bhavan
+            <span className="mb-1 block text-xs font-semibold text-gray-600">
+              {mode === 'video' ? 'Meeting link' : mode === 'phone' ? 'Call details' : 'Venue & map link'}
+            </span>
+            <div className="grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1" role="radiogroup" aria-label="When to share the details">
+              {[
+                { later: false, label: mode === 'video' ? 'Add link now' : 'Add now' },
+                { later: true, label: 'Share later' },
+              ].map((o) => (
+                <button
+                  key={String(o.later)}
+                  type="button"
+                  role="radio"
+                  aria-checked={shareLater === o.later}
+                  onClick={() => setShareLater(o.later)}
+                  className={`rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
+                    shareLater === o.later ? 'bg-white text-plum shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {o.label}
                 </button>
-              )}
+              ))}
             </div>
-            <input
-              type="text"
-              value={shareLater ? '' : location}
-              disabled={shareLater}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder={
-                shareLater
-                  ? 'Will be shared later'
-                  : mode === 'video'
-                    ? 'https://meet.google.com/…'
-                    : mode === 'phone'
-                      ? 'e.g. HR will call you on your registered number'
-                      : 'Venue name and Google Maps link'
-              }
-              className={`${inputCls} disabled:bg-gray-100 disabled:text-gray-400`}
-            />
-            <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs text-gray-600">
-              <input
-                type="checkbox"
-                checked={shareLater}
-                onChange={(e) => setShareLater(e.target.checked)}
-                className="h-3.5 w-3.5 rounded border-gray-300 text-plum focus:ring-plum"
-              />
-              Share {mode === 'video' ? 'the link' : 'the details'} later
-            </label>
-            <p className="mt-2 rounded-lg bg-gray-50 px-3 py-2 text-[11px] leading-relaxed text-gray-500">
-              Candidate sees: <span className="font-semibold text-gray-700 [overflow-wrap:anywhere]">{whereLine(mode, shareLater ? '' : location)}</span>
+          </div>
+          <div className="space-y-3">
+            {!shareLater && mode !== 'video' && (
+              <label className="block">
+                <span className="mb-1 flex items-center justify-between gap-2 text-xs font-semibold text-gray-600">
+                  {mode === 'phone' ? 'Call details (optional)' : 'Venue name'}
+                  {mode === 'in-person' && (venue !== DEFAULT_VENUE || link !== DEFAULT_VENUE_LINK) && (
+                    <button
+                      type="button"
+                      onClick={() => { setVenue(DEFAULT_VENUE); setLink(DEFAULT_VENUE_LINK); }}
+                      className="text-[11px] font-semibold text-ocean hover:text-navy"
+                    >
+                      Use Chaitanya Bhavan
+                    </button>
+                  )}
+                </span>
+                <input
+                  type="text"
+                  value={venue}
+                  onChange={(e) => setVenue(e.target.value)}
+                  placeholder={mode === 'phone' ? 'e.g. HR will call you on your registered number' : 'e.g. Chaitanya Bhavan'}
+                  className={inputCls}
+                />
+              </label>
+            )}
+            {!shareLater && mode !== 'phone' && (
+              <label className="block">
+                {/* Video: the section title already says "Meeting link". */}
+                {mode !== 'video' && (
+                  <span className="mb-1 block text-xs font-semibold text-gray-600">Google Maps link (optional)</span>
+                )}
+                <input
+                  aria-label={mode === 'video' ? 'Meeting link' : 'Google Maps link'}
+                  type="url"
+                  inputMode="url"
+                  value={link}
+                  onChange={(e) => setLink(e.target.value)}
+                  placeholder={mode === 'video' ? 'Google Meet, Zoom, Teams or any link' : 'https://maps.app.goo.gl/…'}
+                  className={inputCls}
+                />
+              </label>
+            )}
+            {shareLater && (
+              <p className="rounded-xl border border-dashed border-gray-300 px-3.5 py-3 text-xs leading-relaxed text-gray-600">
+                The candidate will be told <span className="font-semibold">&quot;HR will share the details with you&quot;</span>.
+                When you have the {mode === 'video' ? 'meeting link' : 'details'}, use <span className="font-semibold">Reschedule</span> to add {mode === 'video' ? 'it' : 'them'} and send again.
+              </p>
+            )}
+            <p className="rounded-lg bg-gray-50 px-3 py-2 text-[11px] leading-relaxed text-gray-500">
+              WhatsApp shows: <span className="font-semibold text-gray-700 [overflow-wrap:anywhere]">{whereLine(mode, shareLater ? '' : venue, shareLater ? '' : link)}</span>
             </p>
           </div>
           <label className="block">
@@ -291,17 +351,20 @@ export default function InterviewCard({ applicationId, candidateName, jobTitle, 
                 <modeInfo.icon className="h-3.5 w-3.5" /> {modeInfo.label}
               </p>
             )}
-            {scheduled.location && (
-              <p className="mt-1 break-words text-sm text-gray-600">
-                {isUrl(scheduled.location) ? (
-                  <a href={scheduled.location.trim()} target="_blank" rel="noopener noreferrer" className="font-medium text-ocean hover:underline">
-                    {scheduled.location}
-                  </a>
-                ) : (
-                  scheduled.location
-                )}
-              </p>
-            )}
+            {(() => {
+              const place = placeOf(scheduled);
+              if (!place.venue && !place.link) return <p className="mt-1 text-sm text-gray-500">{LATER}</p>;
+              return (
+                <>
+                  {place.venue && <p className="mt-1 break-words text-sm font-medium text-gray-700">{place.venue}</p>}
+                  {place.link && (
+                    <a href={place.link} target="_blank" rel="noopener noreferrer" className="mt-0.5 block break-all text-sm font-medium text-ocean hover:underline">
+                      {place.link}
+                    </a>
+                  )}
+                </>
+              );
+            })()}
             {scheduled.notes && <p className="mt-2 whitespace-pre-line text-xs text-gray-500">{scheduled.notes}</p>}
           </div>
           {!past && (

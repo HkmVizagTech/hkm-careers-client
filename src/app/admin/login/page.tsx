@@ -54,7 +54,7 @@ export default function AdminLoginPage() {
             <img
               src="/brand/hkm-logo-white.png"
               alt="Srila Prabhupada's Hare Krishna Movement Visakhapatnam"
-              className="mx-auto h-20 w-auto object-contain"
+              className="mx-auto h-24 w-auto object-contain"
             />
             <h1 className="mt-5 text-xl font-bold text-white">Welcome Back</h1>
             <p className="mt-1 text-sm text-white/70">

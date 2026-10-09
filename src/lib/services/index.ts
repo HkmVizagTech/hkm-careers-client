@@ -90,7 +90,7 @@ export async function trackApplication(id: string): Promise<{
   job: { title: string; location: string; type: string } | null;
   status: string;
   appliedAt: string;
-  interview?: { scheduledAt: string; mode: "in-person" | "phone" | "video"; location: string } | null;
+  interview?: { scheduledAt: string; mode: "in-person" | "phone" | "video"; venue: string; link: string } | null;
 }> {
   const { data } = await api.get(`/applications/track/${id}`);
   return data;
@@ -241,7 +241,7 @@ export async function getAttentionSummary(): Promise<AttentionSummary> {
 
 export async function scheduleInterview(
   id: string,
-  interview: { scheduledAt: string; mode?: string; location?: string; notes?: string; notify?: boolean }
+  interview: { scheduledAt: string; mode?: string; venue?: string; link?: string; notes?: string; notify?: boolean }
 ): Promise<{ interview: Interview; notification: CandidateNotification | null }> {
   const { data } = await api.put(`/applications/${id}/interview`, interview);
   return data;

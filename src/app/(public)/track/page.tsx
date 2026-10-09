@@ -36,7 +36,7 @@ type TrackedApplication = {
   job: { title: string; location: string; type: string } | null;
   status: string;
   appliedAt: string;
-  interview?: { scheduledAt: string; mode: 'in-person' | 'phone' | 'video'; location: string } | null;
+  interview?: { scheduledAt: string; mode: 'in-person' | 'phone' | 'video'; venue: string; link: string } | null;
 };
 
 const MODE_LABEL = { 'in-person': 'In person', phone: 'Phone call', video: 'Video call' } as const;
@@ -72,7 +72,7 @@ function LinkifiedText({ text }: { text: string }) {
 }
 
 function InterviewDetails({ interview }: { interview: NonNullable<TrackedApplication['interview']> }) {
-  const url = interview.location.match(/https?:\/\/\S+/)?.[0];
+  const url = interview.link;
   const isVideo = interview.mode === 'video';
   const ModeIcon = isVideo ? Video : interview.mode === 'phone' ? Phone : MapPin;
   const label = isVideo ? 'Meeting link' : interview.mode === 'phone' ? 'Details' : 'Venue';
@@ -101,7 +101,14 @@ function InterviewDetails({ interview }: { interview: NonNullable<TrackedApplica
         <div>
           <dt className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">{label}</dt>
           <dd className="mt-0.5 text-gray-700">
-            {interview.location ? <LinkifiedText text={interview.location} /> : 'HR will share the details with you'}
+            {interview.venue || interview.link ? (
+              <>
+                {interview.venue && <span className="block font-semibold text-navy">{interview.venue}</span>}
+                {interview.link && <LinkifiedText text={interview.link} />}
+              </>
+            ) : (
+              'HR will share the details with you'
+            )}
           </dd>
         </div>
       </dl>
