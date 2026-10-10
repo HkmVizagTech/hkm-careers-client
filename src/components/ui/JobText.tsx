@@ -46,8 +46,8 @@ export function JobTextBlocks({ blocks, compact = false }: { blocks: JobTextBloc
             <ol key={i} className="space-y-2.5">
               {b.items.map((item, j) => (
                 <li key={j} className="flex items-start gap-3">
-                  <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-ocean/10 text-[11px] font-bold text-ocean">
-                    {j + 1}
+                  <span className="mt-0.5 flex h-5 min-w-[1.25rem] flex-shrink-0 px-1 items-center justify-center rounded-full bg-ocean/10 text-[11px] font-bold text-ocean">
+                    {(b.start ?? 1) + j}
                   </span>
                   <span className="min-w-0"><Inline text={item} /></span>
                 </li>
