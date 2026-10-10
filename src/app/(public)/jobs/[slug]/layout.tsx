@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import type { Job } from '@/types';
+import { blocksToHtml, jobSummary, jobTextBlocks } from '@/lib/jobText';
 
 /**
  * Server-side wrapper for a job page (and its /apply form):
@@ -21,12 +22,10 @@ async function fetchJob(slug: string): Promise<Job | null> {
   }
 }
 
-const firstLine = (text?: string) => (text || '').split('\n').map((l) => l.trim()).filter(Boolean);
-
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const job = await fetchJob(params.slug);
   if (!job) return { title: 'Job not found | HKM Vizag Careers' };
-  const description = firstLine(job.description).join(' ').slice(0, 200) || `Apply for ${job.title} at ${ORG_NAME}.`;
+  const description = jobSummary(job) || `Apply for ${job.title} at ${ORG_NAME}.`;
   const url = `${SITE_URL}/jobs/${job.slug}`;
   const title = `${job.title} | HKM Vizag Careers`;
   return {
@@ -50,14 +49,17 @@ const EMPLOYMENT_TYPE: Record<Job['type'], string> = {
 const escapeHtml = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c] as string);
 
 function jobPostingJsonLd(job: Job) {
-  const list = (title: string, text?: string) => {
-    const items = firstLine(text);
-    return items.length ? `<p><strong>${title}</strong></p><ul>${items.map((i) => `<li>${escapeHtml(i)}</li>`).join('')}</ul>` : '';
+  const section = (title: string, text?: string) => {
+    const html = blocksToHtml(jobTextBlocks(text, job.descriptionFormat));
+    return html ? `<p><strong>${title}</strong></p>${html}` : '';
   };
+  const tags = job.qualificationTags?.length
+    ? `<ul>${job.qualificationTags.map((t) => `<li>${escapeHtml(t)}</li>`).join('')}</ul>`
+    : '';
   const description =
-    list('About the role', job.description) +
-    list('Responsibilities', job.responsibilities) +
-    list('Qualifications', job.qualifications) +
+    section('About the role', job.description) +
+    section('Responsibilities', job.responsibilities) +
+    (tags || job.qualifications ? `<p><strong>Qualifications</strong></p>${tags}${blocksToHtml(jobTextBlocks(job.qualifications, job.descriptionFormat))}` : '') +
     (job.experience ? `<p><strong>Experience:</strong> ${escapeHtml(job.experience)}</p>` : '');
 
   const data: Record<string, unknown> = {

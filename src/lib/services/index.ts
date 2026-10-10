@@ -6,6 +6,7 @@ import type {
   ApplicationsResponse,
   WhatsAppMessage,
   Department,
+  QualificationOption,
   DashboardStats,
   AdminUser,
   AuthUser,
@@ -179,6 +180,25 @@ export async function updateDepartment(
 
 export async function deleteDepartment(id: string): Promise<void> {
   await api.delete(`/departments/${id}`);
+}
+
+export async function getQualificationOptions(): Promise<QualificationOption[]> {
+  const { data } = await api.get("/qualification-options");
+  return data;
+}
+
+export async function createQualificationOption(label: string): Promise<QualificationOption> {
+  const { data } = await api.post("/qualification-options", { label });
+  return data;
+}
+
+export async function updateQualificationOption(id: string, label: string): Promise<QualificationOption> {
+  const { data } = await api.put(`/qualification-options/${id}`, { label });
+  return data;
+}
+
+export async function deleteQualificationOption(id: string): Promise<void> {
+  await api.delete(`/qualification-options/${id}`);
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {

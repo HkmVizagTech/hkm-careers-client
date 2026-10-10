@@ -6,6 +6,7 @@ import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/lib/toast';
 import { formatDate } from '@/lib/utils';
 import type { Job } from '@/types';
+import { blocksToPlainText, jobTextBlocks } from '@/lib/jobText';
 
 /** Each platform gets its own link (?src=...) so admin can see where applicants came from. */
 const PLATFORMS: { src: string; label: string; tone: string }[] = [
@@ -25,7 +26,6 @@ const TYPE_LABEL: Record<Job['type'], string> = {
   intern: 'Internship',
 };
 
-const points = (text?: string) => (text || '').split('\n').map((l) => l.trim()).filter(Boolean);
 
 function siteOrigin() {
   if (typeof window !== 'undefined') return window.location.origin;
@@ -34,10 +34,14 @@ function siteOrigin() {
 
 /** Plain-text JD that pastes cleanly into LinkedIn, Indeed and Naukri description boxes. */
 function jobDescriptionText(job: Job, link: string) {
-  const section = (title: string, text?: string) => {
-    const items = points(text);
-    return items.length ? `\n${title}\n${items.map((i) => `• ${i}`).join('\n')}\n` : '';
-  };
+  const body = (text?: string) => blocksToPlainText(jobTextBlocks(text, job.descriptionFormat));
+  const section = (title: string, text: string) => (text ? `\n${title.toUpperCase()}\n${text}\n` : '');
+  const qualifications = [
+    job.qualificationTags?.length ? `Education: ${job.qualificationTags.join(' / ')}` : '',
+    body(job.qualifications),
+  ]
+    .filter(Boolean)
+    .join('\n');
   const meta = [
     `📍 ${job.location}`,
     `💼 ${TYPE_LABEL[job.type] || job.type}`,
@@ -49,9 +53,9 @@ function jobDescriptionText(job: Job, link: string) {
     `${job.title} – Hare Krishna Movement, Visakhapatnam`,
     '',
     meta.join('\n'),
-    section('About the role', job.description),
-    section('Responsibilities', job.responsibilities),
-    section('Qualifications', job.qualifications),
+    section('About the role', body(job.description)),
+    section('Responsibilities', body(job.responsibilities)),
+    section('Qualifications', qualifications),
     job.targetGender && job.targetGender !== 'any' ? `\nThis position is open to ${job.targetGender} applicants only.\n` : '',
     `\nApply here: ${link}`,
   ]

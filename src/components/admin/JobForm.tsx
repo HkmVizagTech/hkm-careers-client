@@ -8,9 +8,7 @@ import {
   Save,
   FileText,
   ListChecks,
-  GraduationCap,
-  Plus,
-  X,
+  ClipboardList,
   Info,
   Eye,
   MapPin,
@@ -24,6 +22,8 @@ import { createJob, updateJob } from '@/lib/services';
 import type { Job, Department } from '@/types';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { toast } from '@/lib/toast';
+import { pointsToText } from '@/lib/jobText';
+import { JobTextArea, QualificationPicker } from './JobContentFields';
 
 const typeLabels: Record<string, string> = {
   'full-time': 'Full Time',
@@ -40,6 +40,7 @@ interface JobFormState {
   description: string;
   responsibilities: string;
   qualifications: string;
+  qualificationTags: string[];
   experience: string;
   salaryRange: string;
   status: string;
@@ -59,6 +60,7 @@ const emptyForm: JobFormState = {
   description: '',
   responsibilities: '',
   qualifications: '',
+  qualificationTags: [],
   experience: '',
   salaryRange: '',
   status: 'active',
@@ -67,77 +69,6 @@ const emptyForm: JobFormState = {
   deadline: '',
   openings: '1',
 };
-
-/** One "point" row used by the repeating bullet inputs. */
-function PointRows({
-  label,
-  icon: Icon,
-  hint,
-  points,
-  setPoints,
-  placeholder,
-  required = false,
-}: {
-  label: string;
-  icon: React.ElementType;
-  hint?: string;
-  points: string[];
-  setPoints: (p: string[]) => void;
-  placeholder: string;
-  required?: boolean;
-}) {
-  const update = (i: number, v: string) => {
-    const next = [...points];
-    next[i] = v;
-    setPoints(next);
-  };
-
-  return (
-    <div>
-      <div className="flex items-baseline justify-between">
-        <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-700">
-          <Icon className="h-4 w-4 text-ocean" />
-          {label}
-          {required && <span className="text-red-500">*</span>}
-        </label>
-        {hint && <span className="text-xs text-gray-400">{hint}</span>}
-      </div>
-      <div className="mt-2.5 space-y-2">
-        {points.map((item, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-navy/[0.06] text-xs font-bold text-navy">
-              {i + 1}
-            </span>
-            <input
-              type="text"
-              value={item}
-              onChange={(e) => update(i, e.target.value)}
-              placeholder={placeholder}
-              className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm transition-all focus:border-ocean focus:bg-white focus:outline-none focus:ring-4 focus:ring-ocean/15"
-            />
-            {points.length > 1 && (
-              <button
-                type="button"
-                onClick={() => setPoints(points.filter((_, idx) => idx !== i))}
-                className="shrink-0 rounded-lg p-2 text-gray-300 transition-colors hover:bg-red-50 hover:text-red-500"
-                aria-label={`Remove ${label.toLowerCase()} ${i + 1}`}
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-        ))}
-        <button
-          type="button"
-          onClick={() => setPoints([...points, ''])}
-          className="inline-flex items-center gap-1.5 rounded-xl border-2 border-dashed border-gray-200 px-4 py-2 text-sm font-medium text-gray-500 transition-all hover:border-ocean hover:bg-ocean/5 hover:text-ocean"
-        >
-          <Plus className="h-4 w-4" /> Add point
-        </button>
-      </div>
-    </div>
-  );
-}
 
 export default function JobForm({
   departments,
@@ -154,9 +85,11 @@ export default function JobForm({
           department: typeof job.department === 'object' ? job.department._id : job.department,
           location: job.location,
           type: job.type,
-          description: job.description,
-          responsibilities: job.responsibilities || '',
-          qualifications: job.qualifications || '',
+          // Older jobs stored one point per line: show them as "• point" lines in the single box.
+          description: job.descriptionFormat === 'text' ? job.description : pointsToText(job.description),
+          responsibilities: job.descriptionFormat === 'text' ? job.responsibilities || '' : pointsToText(job.responsibilities),
+          qualifications: job.descriptionFormat === 'text' ? job.qualifications || '' : pointsToText(job.qualifications),
+          qualificationTags: job.qualificationTags || [],
           experience: job.experience || '',
           salaryRange: job.salaryRange || '',
           status: job.status,
@@ -166,15 +99,6 @@ export default function JobForm({
           openings: String(job.openings || 1),
         }
       : emptyForm
-  );
-  const [descriptionPoints, setDescriptionPoints] = useState<string[]>(
-    job?.description ? job.description.split('\n').filter(Boolean) : ['']
-  );
-  const [responsibilityPoints, setResponsibilityPoints] = useState<string[]>(
-    job?.responsibilities ? job.responsibilities.split('\n').filter(Boolean) : ['']
-  );
-  const [qualificationPoints, setQualificationPoints] = useState<string[]>(
-    job?.qualifications ? job.qualifications.split('\n').filter(Boolean) : ['']
   );
   const [showPreview, setShowPreview] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -189,7 +113,7 @@ export default function JobForm({
     [departments, form.department]
   );
 
-  const filledPoints = (arr: string[]) => arr.map((p) => p.trim()).filter(Boolean);
+  const wordCount = (text: string) => (text.trim() ? text.trim().split(/\s+/).length : 0);
   const isEdit = !!job;
 
   const validate = (): boolean => {
@@ -197,7 +121,7 @@ export default function JobForm({
     if (!form.title.trim()) errs.title = 'Job title is required';
     if (!form.department) errs.department = 'Department is required';
     if (!form.location.trim()) errs.location = 'Location is required';
-    if (filledPoints(descriptionPoints).length === 0) errs.description = 'Add at least one description point';
+    if (!form.description.trim()) errs.description = 'Add the job description';
     if (form.status === 'active' && form.deadline && form.deadline < toISTDateInput(new Date())) {
       errs.deadline = 'This date has passed. Pick a future date or clear it.';
     }
@@ -217,9 +141,10 @@ export default function JobForm({
       const jobData = {
         ...form,
         openings: Math.max(1, parseInt(form.openings, 10) || 1),
-        description: filledPoints(descriptionPoints).join('\n'),
-        responsibilities: filledPoints(responsibilityPoints).join('\n'),
-        qualifications: filledPoints(qualificationPoints).join('\n'),
+        description: form.description.trim(),
+        responsibilities: form.responsibilities.trim(),
+        qualifications: form.qualifications.trim(),
+        descriptionFormat: 'text' as const,
       };
       if (isEdit && job) await updateJob(job._id, jobData as Partial<Job>);
       else await createJob(jobData as Partial<Job> & { department: string });
@@ -279,7 +204,7 @@ export default function JobForm({
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         {/* Form column */}
-        <div className="space-y-6 lg:col-span-2">
+        <div className="min-w-0 space-y-6 lg:col-span-2">
           {/* Section: The Basics */}
           <section className="rounded-2xl border border-hairline bg-white p-5 shadow-soft sm:p-6">
             <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
@@ -431,31 +356,47 @@ export default function JobForm({
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-ocean to-cyan text-xs font-bold text-white">2</span>
               Role Details
             </h2>
-            <p className="mt-1 text-xs text-gray-400">Each point becomes a bullet on the job page.</p>
+            <p className="mt-1 text-xs text-gray-400">
+              Paste the JD straight from Indeed, LinkedIn, Word or a PDF. Headings, bullets and numbered points are
+              formatted automatically. Use Preview to check.
+            </p>
             <div className="mt-5 space-y-6">
-              <PointRows
-                label="Description"
+              <JobTextArea
+                id="job-description"
+                label="Job Description"
                 icon={FileText}
-                points={descriptionPoints}
-                setPoints={setDescriptionPoints}
-                placeholder="What is this role about?"
+                value={form.description}
+                onChange={(v) => set('description', v)}
+                placeholder={'Paste or type the full job description.\n\nPrimary Role\nWhat this role is about...\n\nKey Responsibilities\n• Plan and run campaigns\n• Report to the team lead'}
                 required
+                minRows={10}
+                error={fieldErrors.description}
               />
-              {fieldErrors.description && <p className="-mt-4 text-xs text-red-500">{fieldErrors.description}</p>}
-              <PointRows
+              <JobTextArea
+                id="job-responsibilities"
                 label="Responsibilities"
                 icon={ListChecks}
-                points={responsibilityPoints}
-                setPoints={setResponsibilityPoints}
-                placeholder="What will they do day to day?"
+                value={form.responsibilities}
+                onChange={(v) => set('responsibilities', v)}
+                placeholder="Optional. Leave empty if the description above already lists them."
+                hint="Shown as its own section on the job page."
+                minRows={3}
               />
-              <PointRows
-                label="Qualifications"
-                icon={GraduationCap}
-                points={qualificationPoints}
-                setPoints={setQualificationPoints}
-                placeholder="What skills or education are needed?"
-              />
+              <div className="rounded-2xl border border-gray-100 bg-gray-50/60 p-4 sm:p-5">
+                <h3 className="text-sm font-bold text-gray-900">Qualifications</h3>
+                <div className="mt-3 space-y-5">
+                  <QualificationPicker selected={form.qualificationTags} onChange={(tags) => set('qualificationTags', tags)} />
+                  <JobTextArea
+                    id="job-qualifications"
+                    label="Other requirements"
+                    icon={ClipboardList}
+                    value={form.qualifications}
+                    onChange={(v) => set('qualifications', v)}
+                    placeholder={'Optional. e.g.\n• Degree in Marketing or a related field\n• Google Ads certification preferred'}
+                    minRows={3}
+                  />
+                </div>
+              </div>
             </div>
           </section>
 
@@ -604,15 +545,15 @@ export default function JobForm({
                 </div>
                 <div className="flex justify-between gap-3">
                   <dt className="text-gray-400">Description</dt>
-                  <dd className="font-medium text-gray-700">{filledPoints(descriptionPoints).length} points</dd>
+                  <dd className="font-medium text-gray-700">{wordCount(form.description) ? `${wordCount(form.description)} words` : '—'}</dd>
                 </div>
                 <div className="flex justify-between gap-3">
                   <dt className="text-gray-400">Responsibilities</dt>
-                  <dd className="font-medium text-gray-700">{filledPoints(responsibilityPoints).length} points</dd>
+                  <dd className="font-medium text-gray-700">{form.responsibilities.trim() ? 'Added' : '—'}</dd>
                 </div>
                 <div className="flex justify-between gap-3">
-                  <dt className="text-gray-400">Qualifications</dt>
-                  <dd className="font-medium text-gray-700">{filledPoints(qualificationPoints).length} points</dd>
+                  <dt className="shrink-0 text-gray-400">Education</dt>
+                  <dd className="text-right font-medium text-gray-700">{form.qualificationTags.length ? form.qualificationTags.join(', ') : '—'}</dd>
                 </div>
                 <div className="flex justify-between gap-3">
                   <dt className="text-gray-400">Open to</dt>

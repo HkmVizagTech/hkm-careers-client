@@ -202,7 +202,7 @@ export default function HomePage() {
               {/* Compact stats for phones and tablets (the glass cards are desktop-only) */}
               <dl className="mt-10 grid grid-cols-3 gap-3 lg:hidden">
                 {[
-                  { label: 'Team members', value: '200+' },
+                  { label: 'Team members', value: '600+' },
                   { label: 'Meals daily', value: '10,000+' },
                   { label: 'Years serving', value: '25+' },
                 ].map((s) => (
@@ -224,7 +224,7 @@ export default function HomePage() {
             >
               {[
                 { label: 'Open Positions', value: featuredJobs.length || 1, suffix: '+', icon: Briefcase, gradient: 'from-cyan to-ocean' },
-                { label: 'Team Members', value: 200, suffix: '+', icon: Users, gradient: 'from-gold to-goldDeep' },
+                { label: 'Team Members', value: 600, suffix: '+', icon: Users, gradient: 'from-gold to-goldDeep' },
                 { label: 'Meals Daily', value: 10000, suffix: '+', icon: Utensils, gradient: 'from-emerald-400 to-teal-500' },
                 { label: 'Years Serving', value: 25, suffix: '+', icon: Globe, gradient: 'from-purple-400 to-indigo-500' },
               ].map((stat, i) => (

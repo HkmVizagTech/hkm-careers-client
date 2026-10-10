@@ -29,7 +29,7 @@ const stats = [
   { label: 'Meals Served Daily', value: '10,000+' },
   { label: 'Students Educated', value: '5,000+' },
   { label: 'Years of Service', value: '25+' },
-  { label: 'Team Members', value: '200+' },
+  { label: 'Team Members', value: '600+' },
 ];
 
 const benefits = [

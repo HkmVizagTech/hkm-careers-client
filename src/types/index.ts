@@ -17,6 +17,10 @@ export interface Job {
   description: string;
   responsibilities: string;
   qualifications: string;
+  /** Ticked qualification checkboxes, e.g. ["B.Tech", "Post Graduation"]. */
+  qualificationTags?: string[];
+  /** 'text' = pasted free text (headings, bullets, paragraphs). Missing on older jobs: one bullet per line. */
+  descriptionFormat?: 'points' | 'text';
   experience: string;
   salaryRange: string;
   status: "draft" | "active" | "closed";
@@ -30,6 +34,12 @@ export interface Job {
   postedBy: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface QualificationOption {
+  _id: string;
+  label: string;
+  order: number;
 }
 
 export interface ApplicationNote {

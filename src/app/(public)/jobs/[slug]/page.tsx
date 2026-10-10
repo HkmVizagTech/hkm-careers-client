@@ -33,6 +33,8 @@ import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { formatDate } from '@/lib/utils';
 import type { Job } from '@/types';
+import JobText from '@/components/ui/JobText';
+import { hasQualifications } from '@/lib/jobText';
 
 const typeLabels: Record<string, string> = {
   'full-time': 'Full Time',
@@ -52,23 +54,6 @@ const fadeUp = {
   hidden: { opacity: 0, y: 24 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: 'easeOut' } },
 };
-
-function renderPoints(text: string) {
-  const lines = text.split('\n').map(l => l.replace(/^[-*•]\s*/, '').trim()).filter(Boolean);
-  if (lines.length <= 1) {
-    return <p className="text-sm leading-relaxed text-gray-600">{text}</p>;
-  }
-  return (
-    <ul className="space-y-3">
-      {lines.map((line, i) => (
-        <li key={i} className="flex items-start gap-3 text-sm leading-relaxed text-gray-600">
-          <span className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-gradient-to-br from-ocean to-cyan" />
-          {line}
-        </li>
-      ))}
-    </ul>
-  );
-}
 
 export default function JobDetailPage() {
   const params = useParams();
@@ -317,7 +302,7 @@ export default function JobDetailPage() {
                 <h2 className="text-lg font-bold text-navy">About This Role</h2>
               </div>
               <div className="p-5 sm:p-8">
-                {renderPoints(job.description)}
+                <JobText text={job.description} format={job.descriptionFormat} />
               </div>
             </motion.div>
 
@@ -334,13 +319,13 @@ export default function JobDetailPage() {
                   <h2 className="text-lg font-bold text-navy">Responsibilities</h2>
                 </div>
                 <div className="p-5 sm:p-8">
-                  {renderPoints(job.responsibilities)}
+                  <JobText text={job.responsibilities} format={job.descriptionFormat} />
                 </div>
               </motion.div>
             )}
 
             {/* Qualifications */}
-            {job.qualifications && (
+            {hasQualifications(job) && (
               <motion.div
                 variants={fadeUp}
                 className="overflow-hidden rounded-2xl border border-hairline bg-white shadow-soft"
@@ -351,8 +336,21 @@ export default function JobDetailPage() {
                   </div>
                   <h2 className="text-lg font-bold text-navy">Qualifications</h2>
                 </div>
-                <div className="p-5 sm:p-8">
-                  {renderPoints(job.qualifications)}
+                <div className="space-y-5 p-5 sm:p-8">
+                  {!!job.qualificationTags?.length && (
+                    <ul className="flex flex-wrap gap-2" aria-label="Education">
+                      {job.qualificationTags.map((tag) => (
+                        <li
+                          key={tag}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-3 py-1 text-sm font-semibold text-navy"
+                        >
+                          <GraduationCap className="h-3.5 w-3.5 text-amber-600" />
+                          {tag}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <JobText text={job.qualifications} format={job.descriptionFormat} />
                 </div>
               </motion.div>
             )}
