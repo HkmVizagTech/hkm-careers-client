@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Search, ExternalLink, FileText, ArrowRight, Download, X, CalendarClock } from 'lucide-react';
+import { Search, ExternalLink, FileText, ArrowLeft, ArrowRight, Download, X, CalendarClock } from 'lucide-react';
 import { getAdminApplications, getAdminJobs, getDepartments, exportApplicationsCsv, viewResume, downloadResume } from '@/lib/services';
 import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
@@ -95,8 +95,17 @@ export default function ApplicationsPage() {
     <div>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
+          {jobFilter && (
+            <Link href="/admin/jobs" className="mb-2 inline-flex items-center gap-1.5 text-sm font-semibold text-ocean transition-colors hover:text-navy">
+              <ArrowLeft className="h-4 w-4" /> Back to Jobs
+            </Link>
+          )}
           <h1 className="text-2xl font-bold text-navy">Applications</h1>
-          <p className="mt-1 text-sm text-gray-500">Review and manage all candidate applications</p>
+          <p className="mt-1 text-sm text-gray-500">
+            {jobFilter && jobs.find((j) => j._id === jobFilter)
+              ? <>For <span className="font-semibold text-navy">{jobs.find((j) => j._id === jobFilter)?.title}</span> · <button type="button" onClick={() => { setJobFilter(''); setPage(1); }} className="font-semibold text-ocean hover:text-navy">Show all jobs</button></>
+              : 'Review and manage all candidate applications'}
+          </p>
         </div>
         <button
           type="button"

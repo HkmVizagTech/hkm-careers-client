@@ -31,6 +31,8 @@ export interface Job {
   /** Last day to apply (end of that day, India time). The job closes itself after it. */
   deadline?: string | null;
   applicationCount: number;
+  /** Admin list only: applications still in "Received". */
+  newApplications?: number;
   postedBy: string;
   createdAt: string;
   updatedAt: string;

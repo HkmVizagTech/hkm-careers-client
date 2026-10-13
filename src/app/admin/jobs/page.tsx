@@ -146,10 +146,23 @@ export default function AdminJobsPage() {
 
               <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
                 <Badge variant={job.type}>{typeLabels[job.type]}</Badge>
-                <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 font-medium text-gray-600">
+                <Link
+                  href={`/admin/applications?job=${job._id}`}
+                  title={`See the applications for ${job.title}`}
+                  className="inline-flex items-center gap-1 rounded-full bg-ocean/10 px-2.5 py-0.5 font-semibold text-ocean transition-colors hover:bg-ocean/20"
+                >
                   <FileText className="h-3 w-3" />
                   {job.applicationCount} application{job.applicationCount !== 1 ? 's' : ''}
-                </span>
+                </Link>
+                {!!job.newApplications && (
+                  <Link
+                    href={`/admin/applications?job=${job._id}&status=received`}
+                    title="Applications not reviewed yet"
+                    className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 font-semibold text-amber-800 transition-colors hover:bg-amber-200"
+                  >
+                    {job.newApplications} new
+                  </Link>
+                )}
                 {(job.openings || 1) > 1 && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-plum/10 px-2.5 py-0.5 font-medium text-plum">
                     <Users className="h-3 w-3" /> {job.openings} openings
@@ -169,6 +182,12 @@ export default function AdminJobsPage() {
               </div>
 
               <div className="mt-4 flex flex-wrap items-center justify-end gap-1.5 border-t border-gray-100 pt-3">
+                <Link
+                  href={`/admin/applications?job=${job._id}`}
+                  className="mr-auto inline-flex items-center gap-1.5 rounded-lg bg-navy px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-ocean"
+                >
+                  <FileText className="h-3.5 w-3.5" /> Applications ({job.applicationCount})
+                </Link>
                 <Link
                   href={`/jobs/${job.slug}`}
                   className="rounded-lg px-3 py-2 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-navy"
