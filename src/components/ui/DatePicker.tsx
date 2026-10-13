@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { usePopover, FIELD_TRIGGER_CLASS } from './usePopover';
+import { usePopover, fieldTriggerClass, type FieldSize } from './usePopover';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -22,6 +22,13 @@ export interface DatePickerProps {
   maxYear?: number;
   /** Blocks selection of dates after today. */
   disableFuture?: boolean;
+  /** Blocks selection of dates before today. */
+  disablePast?: boolean;
+  size?: FieldSize;
+  ariaLabel?: string;
+  id?: string;
+  /** Show the Clear action (default true). */
+  clearable?: boolean;
 }
 
 function pad(n: number) {
@@ -52,6 +59,11 @@ export function DatePicker({
   minYear = 1950,
   maxYear = new Date().getFullYear() + 10,
   disableFuture = false,
+  disablePast = false,
+  size = 'md',
+  ariaLabel,
+  id,
+  clearable = true,
 }: DatePickerProps) {
   const selected = parseISO(value);
   const today = new Date();
@@ -108,8 +120,10 @@ export function DatePicker({
     setOpen(false);
   };
 
-  const isDisabled = (day: number) =>
-    disableFuture && new Date(viewYear, viewMonth, day) > today;
+  const isDisabled = (day: number) => {
+    const d = new Date(viewYear, viewMonth, day);
+    return (disableFuture && d > today) || (disablePast && d < today);
+  };
 
   const isSelected = (day: number) =>
     !!selected &&
@@ -127,16 +141,20 @@ export function DatePicker({
       <button
         ref={triggerRef}
         type="button"
+        id={id}
         onClick={() => setOpen(!open)}
-        className={`${FIELD_TRIGGER_CLASS} ${
-          error ? 'border-red-400 bg-red-50/30' : 'border-gray-300'
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label={ariaLabel ? `${ariaLabel}: ${selected ? formatDisplay(selected) : placeholder}` : undefined}
+        className={`${fieldTriggerClass(size)} ${
+          error ? 'border-red-400 bg-red-50/30' : size === 'md' ? 'border-gray-300' : 'border-gray-200'
         } ${open ? 'border-ocean ring-2 ring-ocean/30' : 'hover:border-gray-400'}`}
       >
         <Calendar className={`h-4 w-4 flex-shrink-0 ${open ? 'text-ocean' : 'text-gray-400'}`} />
         <span className={`truncate ${selected ? 'text-gray-900' : 'text-gray-400'}`}>
           {selected ? formatDisplay(selected) : placeholder}
         </span>
-        {selected && (
+        {selected && clearable && (
           <span
             role="button"
             tabIndex={-1}
@@ -245,6 +263,8 @@ export function DatePicker({
                             type="button"
                             disabled={disabled}
                             onClick={() => pick(day)}
+                            aria-label={new Date(viewYear, viewMonth, day).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                            aria-pressed={isSelected(day)}
                             className={`flex h-8 items-center justify-center rounded-lg text-xs font-semibold transition-all ${
                               isSelected(day)
                                 ? 'bg-gradient-to-br from-navy to-ocean text-white shadow-md shadow-navy/20'
@@ -264,6 +284,7 @@ export function DatePicker({
                     <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
                       <button
                         type="button"
+                        disabled={disableFuture && disablePast}
                         onClick={() => {
                           onChange(toISO(today));
                           setOpen(false);
@@ -272,7 +293,7 @@ export function DatePicker({
                       >
                         Today
                       </button>
-                      <button
+                      {clearable && <button
                         type="button"
                         onClick={() => {
                           onChange('');
@@ -281,7 +302,7 @@ export function DatePicker({
                         className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
                       >
                         Clear
-                      </button>
+                      </button>}
                     </div>
                   </div>
                 )}

@@ -52,6 +52,7 @@ import { formatDate } from '@/lib/utils';
 import type { Application, CandidateNotification, RoleFilled, WhatsAppMessage } from '@/types';
 import { reportDelivery } from '@/lib/notify';
 import EmailsCard from '@/components/admin/EmailsCard';
+import { Checkbox } from '@/components/ui/Checkbox';
 
 const statuses = [
   { value: 'received', label: 'Received', color: 'bg-gray-100 text-gray-700' },
@@ -250,6 +251,24 @@ export default function ApplicationDetailPage() {
             <p className="mt-1 text-xs text-gray-500">
               Came from: <span className="font-semibold capitalize text-gray-700">{app.source || 'Careers site (direct)'}</span>
             </p>
+            {!!app.otherApplications?.length && (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+                <span className="font-semibold text-amber-700">Also applied for:</span>
+                {app.otherApplications.map((o) => (
+                  <Link
+                    key={o._id}
+                    href={`/admin/applications/${o._id}`}
+                    className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 font-semibold text-amber-900 ring-1 ring-amber-200 transition-colors hover:bg-amber-100"
+                    title={`${o.applicationNumber || ''} · applied ${formatDate(o.createdAt)}`}
+                  >
+                    {o.job?.title || 'Another job'}
+                    <span className="font-normal text-amber-800/80">
+                      · {statuses.find((s) => s.value === o.status)?.label || o.status}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
           {/* The things HR does most, one tap away. */}
           <div className="flex flex-wrap gap-2">
@@ -510,12 +529,7 @@ export default function ApplicationDetailPage() {
         </p>
         {statusConfirm !== 'received' && (
           <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl bg-emerald-50 p-3.5 text-sm text-emerald-900">
-            <input
-              type="checkbox"
-              checked={notifyCandidate}
-              onChange={(e) => setNotifyCandidate(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500"
-            />
+            <Checkbox checked={notifyCandidate} onChange={setNotifyCandidate} tone="emerald" className="mt-0.5" />
             <span>
               <span className="flex items-center gap-1.5 font-semibold"><Mail className="h-4 w-4" /> Email the candidate</span>
               <span className="mt-0.5 block text-xs text-emerald-800/80">

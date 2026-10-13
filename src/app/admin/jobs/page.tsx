@@ -28,6 +28,7 @@ import { formatDate } from '@/lib/utils';
 import ShareJobModal from '@/components/admin/ShareJobModal';
 import CloseRemainingModal from '@/components/admin/CloseRemainingModal';
 import type { Job, Department } from '@/types';
+import { SelectField } from '@/components/ui/SelectField';
 
 const typeLabels: Record<string, string> = { 'full-time': 'Full Time', 'part-time': 'Part Time', volunteer: 'Volunteer', intern: 'Internship' };
 const statusLabels: Record<string, string> = { draft: 'Draft', active: 'Active', closed: 'Closed' };
@@ -87,13 +88,19 @@ export default function AdminJobsPage() {
           <input type="text" placeholder="Search jobs..." value={search} onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-ocean focus:outline-none focus:ring-4 focus:ring-ocean/15" />
         </div>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:border-ocean focus:outline-none focus:ring-4 focus:ring-ocean/15">
-          <option value="">All Statuses</option>
-          <option value="draft">Draft</option>
-          <option value="active">Active</option>
-          <option value="closed">Closed</option>
-        </select>
+        <SelectField
+          size="sm"
+          className="sm:w-48"
+          ariaLabel="Filter by status"
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={[
+            { value: '', label: 'All Statuses' },
+            { value: 'draft', label: 'Draft' },
+            { value: 'active', label: 'Active' },
+            { value: 'closed', label: 'Closed' },
+          ]}
+        />
       </div>
 
       {loading ? (

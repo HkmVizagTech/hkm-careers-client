@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Check, ChevronDown } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { usePopover, FIELD_TRIGGER_CLASS } from './usePopover';
+import { usePopover, fieldTriggerClass, type FieldSize } from './usePopover';
 
 export interface SelectOption {
   value: string;
@@ -23,6 +23,14 @@ export interface SelectFieldProps {
   icon?: LucideIcon;
   /** Groups options under sticky headings. Keys must match `option.group`. */
   maxHeight?: number;
+  /** md (default, public forms) · sm (admin forms and filters) · xs (inline toolbars). */
+  size?: FieldSize;
+  /** Accessible name when there is no visible <label>. */
+  ariaLabel?: string;
+  id?: string;
+  disabled?: boolean;
+  /** Extra classes for the trigger (e.g. a width). */
+  className?: string;
 }
 
 export function SelectField({
@@ -33,10 +41,16 @@ export function SelectField({
   error = false,
   icon: Icon,
   maxHeight = 280,
+  size = 'md',
+  ariaLabel,
+  id,
+  disabled = false,
+  className = '',
 }: SelectFieldProps) {
   const { open, setOpen, position, triggerRef, popoverRef } = usePopover({
     width: 'trigger',
     estimatedHeight: maxHeight + 16,
+    minWidth: size === 'md' ? 0 : 180,
   });
   const [mounted, setMounted] = useState(false);
   const [highlight, setHighlight] = useState(0);
@@ -62,30 +76,65 @@ export function SelectField({
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         setHighlight((h) => Math.max(h - 1, 0));
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        setHighlight(0);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        setHighlight(options.length - 1);
       } else if (e.key === 'Enter') {
         e.preventDefault();
         const opt = options[highlight];
         if (opt) {
           onChange(opt.value);
           setOpen(false);
+          triggerRef.current?.focus();
+        }
+      } else if (e.key === 'Tab') {
+        setOpen(false);
+      } else if (e.key.length === 1 && /\S/.test(e.key)) {
+        // Type a letter to jump to the next option starting with it.
+        const ch = e.key.toLowerCase();
+        const start = (highlight + 1) % options.length;
+        for (let k = 0; k < options.length; k++) {
+          const idx = (start + k) % options.length;
+          if (options[idx].label.toLowerCase().startsWith(ch)) {
+            setHighlight(idx);
+            break;
+          }
         }
       }
     }
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [open, highlight, options, onChange, setOpen]);
+  }, [open, highlight, options, onChange, setOpen, triggerRef]);
+
+  // Keep the highlighted option in view while using the keyboard.
+  useEffect(() => {
+    if (!open) return;
+    popoverRef.current?.querySelector<HTMLElement>(`[data-index="${highlight}"]`)?.scrollIntoView({ block: 'nearest' });
+  }, [open, highlight, popoverRef]);
 
   return (
     <>
       <button
         ref={triggerRef}
         type="button"
+        id={id}
+        disabled={disabled}
         onClick={() => setOpen(!open)}
+        onKeyDown={(e) => {
+          if (!open && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+            e.preventDefault();
+            setOpen(true);
+          }
+        }}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className={`${FIELD_TRIGGER_CLASS} ${
-          error ? 'border-red-400 bg-red-50/30' : 'border-gray-300'
-        } ${open ? 'border-ocean ring-2 ring-ocean/30' : 'hover:border-gray-400'}`}
+        aria-label={ariaLabel ? `${ariaLabel}: ${selected ? selected.label : placeholder}` : undefined}
+        className={`${fieldTriggerClass(size)} ${
+          error ? 'border-red-400 bg-red-50/30' : size === 'md' ? 'border-gray-300' : 'border-gray-200'
+        } ${open ? 'border-ocean ring-2 ring-ocean/30' : 'hover:border-gray-400'} disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
       >
         {Icon && (
           <Icon className={`h-4 w-4 flex-shrink-0 ${open ? 'text-ocean' : 'text-gray-400'}`} />
@@ -107,6 +156,7 @@ export function SelectField({
               <motion.div
                 ref={popoverRef}
                 role="listbox"
+                aria-label={ariaLabel}
                 initial={{ opacity: 0, scale: 0.97 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.97 }}
@@ -127,12 +177,14 @@ export function SelectField({
                     <button
                       key={opt.value || `empty-${i}`}
                       type="button"
+                      data-index={i}
                       role="option"
                       aria-selected={isSelected}
                       onMouseEnter={() => setHighlight(i)}
                       onClick={() => {
                         onChange(opt.value);
                         setOpen(false);
+                        triggerRef.current?.focus();
                       }}
                       className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${
                         isSelected

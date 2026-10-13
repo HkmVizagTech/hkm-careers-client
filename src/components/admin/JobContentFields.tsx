@@ -12,6 +12,7 @@ import {
 } from '@/lib/services';
 import { toast } from '@/lib/toast';
 import type { QualificationOption } from '@/types';
+import { Checkbox } from '@/components/ui/Checkbox';
 
 const apiMessage = (err: unknown, fallback: string) =>
   (err as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback;
@@ -527,12 +528,7 @@ export function QualificationPicker({ selected, onChange }: { selected: string[]
                 </button>
               </div>
               <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs text-gray-500">
-                <input
-                  type="checkbox"
-                  checked={otherSave}
-                  onChange={(e) => setOtherSave(e.target.checked)}
-                  className="h-3.5 w-3.5 accent-ocean"
-                />
+                <Checkbox checked={otherSave} onChange={setOtherSave} size="sm" />
                 Also add it to the list for future jobs
               </label>
             </div>

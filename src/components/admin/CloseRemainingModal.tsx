@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { closeJobRemaining, getJobPipeline } from '@/lib/services';
 import { toast } from '@/lib/toast';
 import type { JobPipeline, RoleFilled } from '@/types';
+import { Checkbox } from '@/components/ui/Checkbox';
 
 interface Props {
   /** Open for this job. `filled` comes from a status change that filled the last opening. */
@@ -84,12 +85,7 @@ export default function CloseRemainingModal({ target, onClose, onDone }: Props) 
 
       {remaining > 0 && (
         <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl bg-gray-50 p-3.5 text-sm text-gray-800">
-          <input
-            type="checkbox"
-            checked={notify}
-            onChange={(e) => setNotify(e.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-          />
+          <Checkbox checked={notify} onChange={setNotify} tone="emerald" className="mt-0.5" />
           <span>
             Send them the &quot;Not Selected&quot; email
             <span className="block text-xs text-gray-500">

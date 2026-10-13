@@ -7,6 +7,7 @@ import { toast } from '@/lib/toast';
 import { formatDate } from '@/lib/utils';
 import type { Job } from '@/types';
 import { blocksToPlainText, jobTextBlocks } from '@/lib/jobText';
+import { SelectField } from '@/components/ui/SelectField';
 
 /** Each platform gets its own link (?src=...) so admin can see where applicants came from. */
 const PLATFORMS: { src: string; label: string; tone: string }[] = [
@@ -145,18 +146,14 @@ export default function ShareJobModal({ job, onClose }: { job: Job | null; onClo
               <h3 className="flex items-center gap-2 text-sm font-bold text-navy">
                 <FileText className="h-4 w-4 text-ocean" /> Full job description
               </h3>
-              <select
+              <SelectField
+                size="xs"
+                className="!w-auto"
+                ariaLabel="Platform for the apply link inside the description"
                 value={jdFor}
-                onChange={(e) => setJdFor(e.target.value)}
-                aria-label="Platform for the apply link inside the description"
-                className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs"
-              >
-                {PLATFORMS.map((p) => (
-                  <option key={p.src} value={p.src}>
-                    Link for {p.label}
-                  </option>
-                ))}
-              </select>
+                onChange={setJdFor}
+                options={PLATFORMS.map((p) => ({ value: p.src, label: `Link for ${p.label}` }))}
+              />
             </div>
             <p className="mt-1 text-xs text-gray-500">Paste into the description box when creating the job on LinkedIn, Indeed or Naukri.</p>
             <textarea

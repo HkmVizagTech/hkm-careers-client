@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Clock } from 'lucide-react';
+import { SelectField } from './SelectField';
 
 /**
  * Inline date + time picker for scheduling (replaces the browser's datetime-local box).
@@ -307,7 +308,7 @@ function nowMinutes() {
   return n.getHours() * 60 + n.getMinutes();
 }
 
-/** Hour / minute / am-pm selects for times that aren't on the half hour. */
+/** Hour / minute / am-pm pickers for times that aren't on the half hour. */
 function CustomTime({ minutes, disabled, onPick }: { minutes: number | null; disabled: boolean; onPick: (m: number) => void }) {
   const m = minutes ?? 10 * 60;
   const h24 = Math.floor(m / 60);
@@ -315,25 +316,38 @@ function CustomTime({ minutes, disabled, onPick }: { minutes: number | null; dis
   const min = m % 60;
   const pm = h24 >= 12;
   const set = (h: number, mm: number, isPm: boolean) => onPick(((h % 12) + (isPm ? 12 : 0)) * 60 + mm);
-  const sel =
-    'rounded-xl border border-gray-200 bg-white px-2.5 py-2 text-sm font-semibold text-gray-800 focus:border-plum focus:outline-none focus:ring-4 focus:ring-plum/15 disabled:opacity-50';
   return (
-    <div className="mt-2 flex items-center gap-1.5">
-      <select aria-label="Hour" disabled={disabled} value={hour12} onChange={(e) => set(+e.target.value, min, pm)} className={sel}>
-        {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
-          <option key={h} value={h}>{h}</option>
-        ))}
-      </select>
+    <div className="mt-2 grid grid-cols-[1fr_auto_1fr_1fr] items-center gap-1.5">
+      <SelectField
+        size="sm"
+        ariaLabel="Hour"
+        disabled={disabled}
+        value={String(hour12)}
+        onChange={(v) => set(+v, min, pm)}
+        options={Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))}
+        maxHeight={220}
+      />
       <span className="font-bold text-gray-400">:</span>
-      <select aria-label="Minutes" disabled={disabled} value={min - (min % 5)} onChange={(e) => set(hour12, +e.target.value, pm)} className={sel}>
-        {Array.from({ length: 12 }, (_, i) => i * 5).map((mm) => (
-          <option key={mm} value={mm}>{pad(mm)}</option>
-        ))}
-      </select>
-      <select aria-label="AM or PM" disabled={disabled} value={pm ? 'pm' : 'am'} onChange={(e) => set(hour12, min, e.target.value === 'pm')} className={sel}>
-        <option value="am">am</option>
-        <option value="pm">pm</option>
-      </select>
+      <SelectField
+        size="sm"
+        ariaLabel="Minutes"
+        disabled={disabled}
+        value={String(min - (min % 5))}
+        onChange={(v) => set(hour12, +v, pm)}
+        options={Array.from({ length: 12 }, (_, i) => ({ value: String(i * 5), label: pad(i * 5) }))}
+        maxHeight={220}
+      />
+      <SelectField
+        size="sm"
+        ariaLabel="AM or PM"
+        disabled={disabled}
+        value={pm ? 'pm' : 'am'}
+        onChange={(v) => set(hour12, min, v === 'pm')}
+        options={[
+          { value: 'am', label: 'am' },
+          { value: 'pm', label: 'pm' },
+        ]}
+      />
     </div>
   );
 }
@@ -342,7 +356,9 @@ function CustomTime({ minutes, disabled, onPick }: { minutes: number | null; dis
 export function describeDateTime(value: string) {
   const { day, minutes } = parse(value);
   if (!day) return '';
-  const d = day.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  const opts: Intl.DateTimeFormatOptions = { weekday: 'short', day: 'numeric', month: 'short' };
+  if (day.getFullYear() !== new Date().getFullYear()) opts.year = 'numeric';
+  const d = day.toLocaleDateString('en-IN', opts);
   return minutes === null ? d : `${d} · ${formatTime(minutes)}`;
 }
 

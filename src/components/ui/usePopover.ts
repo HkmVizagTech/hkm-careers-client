@@ -16,6 +16,8 @@ interface UsePopoverOptions {
   gap?: number;
   /** Minimum distance kept between the popover and the viewport edges. */
   margin?: number;
+  /** With width 'trigger': never narrower than this (for small triggers). */
+  minWidth?: number;
 }
 
 /**
@@ -32,6 +34,7 @@ export function usePopover({
   estimatedHeight = 320,
   gap = 8,
   margin = 8,
+  minWidth = 0,
 }: UsePopoverOptions = {}) {
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<PopoverPosition | null>(null);
@@ -47,7 +50,7 @@ export function usePopover({
       const rect = trigger.getBoundingClientRect();
       const viewportW = window.innerWidth;
       const viewportH = window.innerHeight;
-      const popWidth = width === 'trigger' ? rect.width : width;
+      const popWidth = width === 'trigger' ? Math.max(rect.width, minWidth) : width;
 
       // Vertical: below if it fits, else above if it fits, else clamp into view.
       let top = rect.bottom + gap;
@@ -123,3 +126,13 @@ export function usePopover({
 /** Shared trigger styling so date pickers, selects, and plain inputs line up exactly. */
 export const FIELD_TRIGGER_CLASS =
   'flex h-[50px] w-full items-center gap-2.5 rounded-xl border bg-white px-4 text-left text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30';
+
+export type FieldSize = 'md' | 'sm' | 'xs';
+
+/** Trigger classes per size: md for forms (50px), sm for filters/admin forms (42px), xs for inline toolbars. */
+export function fieldTriggerClass(size: FieldSize = 'md') {
+  if (size === 'md') return FIELD_TRIGGER_CLASS;
+  const base =
+    'flex w-full items-center rounded-xl border bg-white text-left shadow-sm transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ocean/30';
+  return size === 'sm' ? `${base} h-[42px] gap-2 px-3.5 text-sm` : `${base} h-8 gap-1.5 rounded-lg px-2.5 text-xs font-semibold`;
+}

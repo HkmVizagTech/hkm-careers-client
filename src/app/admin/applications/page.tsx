@@ -12,6 +12,7 @@ import { toast } from '@/lib/toast';
 
 import { formatDate, formatDateTime } from '@/lib/utils';
 import type { Application, Job, Department, PaginationInfo } from '@/types';
+import { SelectField } from '@/components/ui/SelectField';
 
 const statusLabels: Record<string, string> = {
   received: 'Received', 'under-review': 'Under Review', shortlisted: 'Shortlisted',
@@ -128,29 +129,39 @@ export default function ApplicationsPage() {
       </div>
 
       <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-        <select value={jobFilter} onChange={(e) => { setJobFilter(e.target.value); setPage(1); }}
-          aria-label="Filter by job"
-          className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:border-ocean focus:outline-none focus:ring-4 focus:ring-ocean/15">
-          <option value="">All Jobs</option>
-          {jobs.map((j) => <option key={j._id} value={j._id}>{j.title}</option>)}
-        </select>
-        <select value={departmentFilter} onChange={(e) => { setDepartmentFilter(e.target.value); setPage(1); }}
-          aria-label="Filter by department"
-          className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:border-ocean focus:outline-none focus:ring-4 focus:ring-ocean/15">
-          <option value="">All Departments</option>
-          {departments.map((d) => <option key={d._id} value={d._id}>{d.name}</option>)}
-        </select>
-        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-          aria-label="Filter by status"
-          className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:border-ocean focus:outline-none focus:ring-4 focus:ring-ocean/15">
-          <option value="">All Statuses</option>
-          <option value="received">Received</option>
-          <option value="under-review">Under Review</option>
-          <option value="shortlisted">Shortlisted</option>
-          <option value="interview">Interview</option>
-          <option value="selected">Selected</option>
-          <option value="rejected">Rejected</option>
-        </select>
+        <div className="min-w-0 flex-1">
+          <SelectField
+            size="sm"
+            ariaLabel="Filter by job"
+            value={jobFilter}
+            onChange={(v) => { setJobFilter(v); setPage(1); }}
+            options={[{ value: '', label: 'All Jobs' }, ...jobs.map((j) => ({ value: j._id, label: j.title }))]}
+          />
+        </div>
+        <SelectField
+          size="sm"
+          className="sm:w-52"
+          ariaLabel="Filter by department"
+          value={departmentFilter}
+          onChange={(v) => { setDepartmentFilter(v); setPage(1); }}
+          options={[{ value: '', label: 'All Departments' }, ...departments.map((d) => ({ value: d._id, label: d.name }))]}
+        />
+        <SelectField
+          size="sm"
+          className="sm:w-48"
+          ariaLabel="Filter by status"
+          value={statusFilter}
+          onChange={(v) => { setStatusFilter(v); setPage(1); }}
+          options={[
+            { value: '', label: 'All Statuses' },
+            { value: 'received', label: 'Received' },
+            { value: 'under-review', label: 'Under Review' },
+            { value: 'shortlisted', label: 'Shortlisted' },
+            { value: 'interview', label: 'Interview' },
+            { value: 'selected', label: 'Selected' },
+            { value: 'rejected', label: 'Rejected' },
+          ]}
+        />
       </div>
 
       {loading ? (

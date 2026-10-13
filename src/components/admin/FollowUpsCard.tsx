@@ -8,6 +8,15 @@ import { addFollowUp, deleteFollowUp, updateFollowUp } from '@/lib/services';
 import { toast } from '@/lib/toast';
 import { formatDateTime, toDateTimeLocal } from '@/lib/utils';
 import type { FollowUp } from '@/types';
+import { DatePicker } from '@/components/ui/DatePicker';
+import { SelectField } from '@/components/ui/SelectField';
+import { formatTime } from '@/components/ui/DateTimePicker';
+
+/** Half-hour times from 7:00 am to 9:00 pm for the reminder time picker. */
+const TIME_OPTIONS = Array.from({ length: 29 }, (_, i) => {
+  const m = 7 * 60 + i * 30;
+  return { value: `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`, label: formatTime(m) };
+});
 
 const inputCls =
   'w-full rounded-xl border border-gray-200 bg-background px-3.5 py-2.5 text-sm focus:border-ocean focus:outline-none focus:ring-4 focus:ring-ocean/15';
@@ -173,7 +182,31 @@ export default function FollowUpsCard({ applicationId, followUps, onChange }: Pr
               );
             })}
           </div>
-          <input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} className={inputCls} aria-label="Remind me at" />
+          <div className="grid grid-cols-2 gap-2">
+            <DatePicker
+              size="sm"
+              ariaLabel="Reminder date"
+              value={when.slice(0, 10)}
+              onChange={(d) => d && setWhen(`${d}T${when.slice(11, 16) || '10:00'}`)}
+              disablePast
+              clearable={false}
+              minYear={new Date().getFullYear()}
+              maxYear={new Date().getFullYear() + 2}
+            />
+            <SelectField
+              size="sm"
+              ariaLabel="Reminder time"
+              value={when.slice(11, 16)}
+              onChange={(t) => setWhen(`${when.slice(0, 10)}T${t}`)}
+              options={
+                TIME_OPTIONS.some((o) => o.value === when.slice(11, 16))
+                  ? TIME_OPTIONS
+                  : [...TIME_OPTIONS, { value: when.slice(11, 16), label: formatTime(+when.slice(11, 13) * 60 + +when.slice(14, 16)) }].sort((a, b) =>
+                      a.value.localeCompare(b.value)
+                    )
+              }
+            />
+          </div>
           <div className="flex gap-2">
             <Button onClick={save} loading={saving} className="flex-1">
               Set reminder

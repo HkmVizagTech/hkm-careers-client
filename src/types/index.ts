@@ -195,6 +195,8 @@ export interface MailStatus {
 
 export interface Application {
   _id: string;
+  /** Same person's applications for other jobs (matched by email or phone); admin view only. */
+  otherApplications?: { _id: string; applicationNumber?: string; status: string; createdAt: string; job?: { _id: string; title: string } | null }[];
   applicationNumber?: string;
   job: Job | string;
   name: string;

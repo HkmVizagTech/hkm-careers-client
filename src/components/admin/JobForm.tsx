@@ -15,7 +15,6 @@ import {
   IndianRupee,
   Clock,
   Users,
-  CalendarDays,
 } from 'lucide-react';
 import { formatDate, toISTDateInput } from '@/lib/utils';
 import { createJob, updateJob } from '@/lib/services';
@@ -24,6 +23,8 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { toast } from '@/lib/toast';
 import { pointsToText } from '@/lib/jobText';
 import { JobTextArea, QualificationPicker } from './JobContentFields';
+import { SelectField } from '@/components/ui/SelectField';
+import { DatePicker } from '@/components/ui/DatePicker';
 
 const typeLabels: Record<string, string> = {
   'full-time': 'Full Time',
@@ -230,18 +231,15 @@ export default function JobForm({
                   <label className="mb-1.5 block text-sm font-semibold text-gray-700">
                     Department <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <SelectField
+                    size="sm"
+                    ariaLabel="Department"
                     value={form.department}
-                    onChange={(e) => set('department', e.target.value)}
-                    className={inputClass('department')}
-                  >
-                    <option value="">Select department</option>
-                    {departments.map((d) => (
-                      <option key={d._id} value={d._id}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(v) => set('department', v)}
+                    placeholder="Select department"
+                    error={!!fieldErrors.department}
+                    options={departments.map((d) => ({ value: d._id, label: d.name }))}
+                  />
                   {fieldErrors.department && <p className="mt-1 text-xs text-red-500">{fieldErrors.department}</p>}
                 </div>
                 <div>
@@ -322,17 +320,17 @@ export default function JobForm({
                 </div>
                 <div>
                   <label htmlFor="job-deadline" className="mb-1.5 block text-sm font-semibold text-gray-700">Apply By</label>
-                  <div className="relative">
-                    <CalendarDays className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                    <input
-                      id="job-deadline"
-                      type="date"
-                      value={form.deadline}
-                      min={toISTDateInput(new Date())}
-                      onChange={(e) => set('deadline', e.target.value)}
-                      className={`${inputClass('deadline')} pl-10`}
-                    />
-                  </div>
+                  <DatePicker
+                    id="job-deadline"
+                    size="sm"
+                    value={form.deadline}
+                    onChange={(v) => set('deadline', v)}
+                    placeholder="No deadline"
+                    disablePast
+                    error={!!fieldErrors.deadline}
+                    minYear={new Date().getFullYear()}
+                    maxYear={new Date().getFullYear() + 2}
+                  />
                   {fieldErrors.deadline ? (
                     <p className="mt-1 text-xs text-red-500">{fieldErrors.deadline}</p>
                   ) : (

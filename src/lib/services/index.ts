@@ -76,6 +76,21 @@ export async function deleteJob(id: string): Promise<void> {
   await api.delete(`/jobs/${id}`);
 }
 
+export interface DuplicateApplication {
+  duplicate: boolean;
+  code?: 'DUPLICATE_APPLICATION';
+  matchedBy?: 'email' | 'phone';
+  applicationNumber?: string;
+  appliedAt?: string;
+  message?: string;
+}
+
+/** Has this email or phone already applied for this job? (public) */
+export async function checkDuplicateApplication(job: string, email: string, phone: string): Promise<DuplicateApplication> {
+  const { data } = await api.post("/applications/check", { job, email, phone });
+  return data;
+}
+
 export async function submitApplication(formData: FormData): Promise<{
   message: string;
   application: { id: string; name: string; email: string };

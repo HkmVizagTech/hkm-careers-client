@@ -39,7 +39,7 @@ import {
   MessageCircle,
   Info,
 } from 'lucide-react';
-import { getPublicJobBySlug, submitApplication } from '@/lib/services';
+import { checkDuplicateApplication, getPublicJobBySlug, submitApplication, type DuplicateApplication } from '@/lib/services';
 import { captureApplySource, readApplySource } from '@/lib/applySource';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
@@ -244,6 +244,9 @@ export default function ApplyPage() {
   const [applicationId, setApplicationId] = useState('');
   const [copied, setCopied] = useState(false);
   const [globalError, setGlobalError] = useState('');
+  /** Set when this email/phone already applied for this job: the form is replaced by a notice. */
+  const [duplicate, setDuplicate] = useState<DuplicateApplication | null>(null);
+  const [checkingDuplicate, setCheckingDuplicate] = useState(false);
   const [showLinkedin, setShowLinkedin] = useState(false);
   const [showGithub, setShowGithub] = useState(false);
   const [showPortfolio, setShowPortfolio] = useState(false);
@@ -382,12 +385,50 @@ export default function ApplyPage() {
     return false;
   };
 
+  // Check for a repeat application as soon as the email / phone are typed, not only at the end.
+  const watchedEmail = watch('email');
+  const watchedPhone = watch('phone');
+  const lastChecked = useRef('');
+  useEffect(() => {
+    if (!job) return;
+    const email = (watchedEmail || '').trim();
+    const digits = (watchedPhone || '').replace(/\D/g, '');
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
+    if (!emailOk && digits.length < 10) return;
+    const key = `${emailOk ? email.toLowerCase() : ''}|${digits.length >= 10 ? digits.slice(-10) : ''}`;
+    if (key === lastChecked.current) return;
+    const t = setTimeout(() => {
+      lastChecked.current = key;
+      checkDuplicateApplication(job._id, emailOk ? email : '', digits.length >= 10 ? watchedPhone : '')
+        .then((dup) => {
+          if (dup?.duplicate) {
+            setDuplicate(dup);
+            scrollToFormTop();
+          }
+        })
+        .catch(() => {});
+    }, 700);
+    return () => clearTimeout(t);
+  }, [watchedEmail, watchedPhone, job]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleContinue = async () => {
     const valid = await trigger(fieldsForStep(step), { shouldFocus: true });
     if (!valid) return;
 
     if (layout.personal === step && !validateGender()) {
       return;
+    }
+
+    // Same email or phone already applied for this job: say so now, not after the whole form.
+    if (layout.personal === step && job) {
+      setCheckingDuplicate(true);
+      const dup = await checkDuplicateApplication(job._id, watch('email'), watch('phone')).catch(() => null);
+      setCheckingDuplicate(false);
+      if (dup?.duplicate) {
+        setDuplicate(dup);
+        scrollToFormTop();
+        return;
+      }
     }
 
     if (layout.educational === step && !validateEducational()) {
@@ -534,7 +575,12 @@ export default function ApplyPage() {
       setSubmitted(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { message?: string } } };
+      const axiosErr = err as { response?: { status?: number; data?: DuplicateApplication & { message?: string } } };
+      if (axiosErr.response?.status === 409 && axiosErr.response.data?.code === 'DUPLICATE_APPLICATION') {
+        setDuplicate({ ...axiosErr.response.data, duplicate: true });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
       setGlobalError(
         axiosErr.response?.data?.message ||
           (err instanceof Error ? err.message : 'Failed to submit application. Please try again.'),
@@ -802,7 +848,54 @@ export default function ApplyPage() {
               </div>
             )}
 
-            <form ref={formRef} onKeyDown={handleFormKeyDown} onSubmit={handleSubmit(onSubmit, onInvalid)} className="mt-6 space-y-6 sm:mt-8 sm:space-y-8 [&>*:not(.hidden)~*:not(.hidden)]:border-t [&>*:not(.hidden)~*:not(.hidden)]:border-hairline [&>*:not(.hidden)~*:not(.hidden)]:pt-6 sm:[&>*:not(.hidden)~*:not(.hidden)]:pt-8">
+            {duplicate && (
+              <div role="alert" className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 sm:p-6">
+                <div className="flex items-start gap-3">
+                  <Info className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                  <div className="min-w-0">
+                    <p className="font-bold text-amber-900">You have already applied for this job</p>
+                    <p className="mt-1 text-sm text-amber-900/90">{duplicate.message}</p>
+                    {duplicate.applicationNumber && (
+                      <p className="mt-3 text-sm text-amber-900">
+                        Your application number:{' '}
+                        <span className="rounded-md bg-white px-2 py-0.5 font-mono font-bold text-navy ring-1 ring-amber-200">
+                          {duplicate.applicationNumber}
+                        </span>
+                      </p>
+                    )}
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {duplicate.applicationNumber && (
+                        <Link
+                          href={`/track?id=${encodeURIComponent(duplicate.applicationNumber)}`}
+                          className="inline-flex items-center gap-2 rounded-xl bg-navy px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-ocean"
+                        >
+                          Track my application
+                        </Link>
+                      )}
+                      <Link
+                        href="/jobs"
+                        className="inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-white px-4 py-2.5 text-sm font-semibold text-amber-900 transition-colors hover:bg-amber-100"
+                      >
+                        See other openings
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDuplicate(null);
+                          setStep(layout.personal);
+                          scrollToFormTop();
+                        }}
+                        className="inline-flex items-center px-2 py-2.5 text-sm font-semibold text-amber-800 underline-offset-2 hover:underline"
+                      >
+                        Change my email / phone
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <form ref={formRef} onKeyDown={handleFormKeyDown} onSubmit={handleSubmit(onSubmit, onInvalid)} hidden={!!duplicate} className="mt-6 space-y-6 sm:mt-8 sm:space-y-8 [&>*:not(.hidden)~*:not(.hidden)]:border-t [&>*:not(.hidden)~*:not(.hidden)]:border-hairline [&>*:not(.hidden)~*:not(.hidden)]:pt-6 sm:[&>*:not(.hidden)~*:not(.hidden)]:pt-8">
               {/* Section: Personal Info */}
               <div className={showsSection('personal') ? '' : 'hidden'}>
                 <h3 className="flex items-center gap-2 text-sm font-bold text-navy uppercase tracking-wider">
@@ -1384,7 +1477,7 @@ export default function ApplyPage() {
                   {/* Distinct keys: React must not turn the clicked Continue button into the
                       submit button mid-click, or the browser submits the form on the last step. */}
                   {step < totalSteps ? (
-                    <Button key="continue" type="button" onClick={handleContinue} size="lg">
+                    <Button key="continue" type="button" onClick={handleContinue} size="lg" loading={checkingDuplicate}>
                       Continue
                       <ArrowRight className="h-4 w-4" />
                     </Button>

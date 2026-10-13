@@ -11,6 +11,7 @@ import { toast } from '@/lib/toast';
 import { formatDateTime, toDateTimeLocal } from '@/lib/utils';
 import type { CandidateNotification, Interview, InterviewMode } from '@/types';
 import { reportDelivery } from '@/lib/notify';
+import { Checkbox } from '@/components/ui/Checkbox';
 
 const MODES: { value: InterviewMode; label: string; icon: typeof Video }[] = [
   { value: 'in-person', label: 'In person', icon: MapPin },
@@ -379,12 +380,7 @@ export default function InterviewCard({ applicationId, candidateName, jobTitle, 
           {/* Stays in view at the bottom of the window, so Save is always reachable on phones. */}
           <div className="sticky bottom-0 -mx-6 -mb-6 flex flex-col gap-3 border-t border-hairline bg-white/95 px-6 pb-6 pt-4 backdrop-blur sm:-mx-7 sm:-mb-7 sm:flex-row sm:items-center sm:justify-between sm:px-7 sm:pb-7">
             <label className="flex cursor-pointer items-start gap-2.5 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                checked={notify}
-                onChange={(e) => setNotify(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-plum focus:ring-plum"
-              />
+              <Checkbox checked={notify} onChange={setNotify} tone="plum" className="mt-0.5" />
               <span>
                 <span className="font-semibold">Email the candidate</span>
                 <span className="block text-xs text-gray-500">Date, time, mode and venue/link, with an &quot;Add to calendar&quot; link.</span>
@@ -407,7 +403,7 @@ export default function InterviewCard({ applicationId, candidateName, jobTitle, 
               <Button onClick={save} loading={saving} disabled={!isCompleteDateTime(when)}>
                 <CalendarClock className="h-4 w-4" />
                 {scheduled ? 'Save' : 'Schedule'}
-                {isCompleteDateTime(when) && <span className="hidden font-normal opacity-80 sm:inline">· {describeDateTime(when)}</span>}
+                {isCompleteDateTime(when) && <span className="hidden whitespace-nowrap font-normal opacity-80 lg:inline">· {describeDateTime(when)}</span>}
               </Button>
             </div>
           </div>
