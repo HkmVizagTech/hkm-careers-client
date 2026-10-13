@@ -39,7 +39,7 @@ type TrackedApplication = {
   interview?: { scheduledAt: string; mode: 'in-person' | 'phone' | 'video'; venue: string; link: string } | null;
 };
 
-const MODE_LABEL = { 'in-person': 'In person', phone: 'Phone call', video: 'Video call' } as const;
+const MODE_LABEL = { 'in-person': 'In person', phone: 'Phone call', video: 'Virtual interview' } as const;
 
 const formatInterview = (iso: string) =>
   new Date(iso).toLocaleString('en-IN', {
@@ -588,7 +588,7 @@ export default function TrackPage() {
             </div>
             <p className="mt-4 text-sm text-gray-500 leading-relaxed">
               Your Application ID was provided when you submitted your application.
-              Check your confirmation page, email, or WhatsApp message for the reference number.
+              Check your confirmation page or email for the reference number.
             </p>
           </motion.div>
         )}

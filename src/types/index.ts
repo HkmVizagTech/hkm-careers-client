@@ -36,6 +36,16 @@ export interface Job {
   updatedAt: string;
 }
 
+export interface EmailDraft {
+  _id: string;
+  label: string;
+  subject: string;
+  /** May contain {name}, {position} and {applicationNo}, filled in when the draft is used. */
+  message: string;
+  order: number;
+  updatedAt?: string;
+}
+
 export interface QualificationOption {
   _id: string;
   label: string;

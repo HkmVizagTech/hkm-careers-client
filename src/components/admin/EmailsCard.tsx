@@ -1,14 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { AlertTriangle, Ban, Check, ChevronDown, Mail, PenLine } from 'lucide-react';
+import Link from 'next/link';
+import { AlertTriangle, Ban, Check, ChevronDown, Mail, PenLine, Settings2 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { sendApplicationEmail } from '@/lib/services';
+import { getEmailDrafts, sendApplicationEmail } from '@/lib/services';
 import { toast } from '@/lib/toast';
 import { formatDateTime } from '@/lib/utils';
-import type { EmailLog } from '@/types';
+import type { EmailDraft, EmailLog } from '@/types';
 
 const KIND_LABEL: Record<EmailLog['kind'], string> = {
   received: 'Application received',
@@ -24,47 +25,66 @@ const STATUS_STYLE: Record<EmailLog['status'], { label: string; cls: string; ico
   skipped: { label: 'Not sent', cls: 'bg-amber-100 text-amber-700', icon: Ban },
 };
 
-/** Ready-made starting points; HR edits before sending. */
-const QUICK: { label: string; subject: string; message: string }[] = [
-  {
-    label: 'Request documents',
-    subject: 'Documents required for your application',
-    message:
-      'Thank you for your application. To take it forward, please reply to this email with the following documents:\n\n1. Updated resume\n2. Educational certificates\n3. A government photo ID\n\nPlease send them within the next 3 days.',
-  },
-  {
-    label: 'Ask for availability',
-    subject: 'Your availability for an interview',
-    message:
-      'We would like to speak with you about your application. Please reply with two or three dates and times over the next week when you are available for a short interview.',
-  },
-  {
-    label: 'Offer follow-up',
-    subject: 'Next steps for joining',
-    message:
-      'Congratulations once again. Our HR team will share the joining details shortly. Please reply to this email if you have any questions in the meantime.',
-  },
-];
+/** Fills {name}, {position} and {applicationNo} in a saved draft. */
+export function fillDraft(text: string, vars: { name: string; position: string; applicationNo: string }) {
+  return text
+    .replace(/\{name\}/gi, vars.name)
+    .replace(/\{position\}/gi, vars.position)
+    .replace(/\{applicationNo\}/gi, vars.applicationNo);
+}
 
 interface Props {
   applicationId: string;
   candidateEmail: string;
   emails: EmailLog[];
   onChange: (emails: EmailLog[]) => void;
+  /** Bump this number to open the compose window (e.g. from the page header's "Email candidate" button). */
+  composeRequest?: number;
+  /** For filling {name}, {position} and {applicationNo} in saved drafts. */
+  candidateName?: string;
+  jobTitle?: string;
+  applicationNo?: string;
 }
 
-export default function EmailsCard({ applicationId, candidateEmail, emails, onChange }: Props) {
+export default function EmailsCard({
+  applicationId,
+  candidateEmail,
+  emails,
+  onChange,
+  composeRequest,
+  candidateName = '',
+  jobTitle = '',
+  applicationNo = '',
+}: Props) {
   const [composeOpen, setComposeOpen] = useState(false);
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  const open = (preset?: (typeof QUICK)[number]) => {
-    setSubject(preset?.subject ?? '');
-    setMessage(preset?.message ?? '');
+  const [drafts, setDrafts] = useState<EmailDraft[] | null>(null);
+  const [draftId, setDraftId] = useState<string | null>(null);
+
+  const vars = { name: candidateName, position: jobTitle || 'the position', applicationNo };
+
+  const open = () => {
+    setSubject('');
+    setMessage('');
+    setDraftId(null);
     setComposeOpen(true);
+    // Saved drafts are edited in Settings; fetch fresh each time the window opens.
+    getEmailDrafts().then(setDrafts).catch(() => setDrafts((d) => d ?? []));
   };
+
+  const applyDraft = (d: EmailDraft) => {
+    setSubject(fillDraft(d.subject, vars));
+    setMessage(fillDraft(d.message, vars));
+    setDraftId(d._id);
+  };
+
+  useEffect(() => {
+    if (composeRequest) open();
+  }, [composeRequest]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const send = async () => {
     if (!subject.trim() || !message.trim()) return toast.error('Add a subject and a message');
@@ -104,14 +124,14 @@ export default function EmailsCard({ applicationId, candidateEmail, emails, onCh
         <button
           type="button"
           onClick={() => open()}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-navy/5 px-3 py-2 text-xs font-semibold text-navy transition-colors hover:bg-navy/10"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-navy px-3 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-ocean"
         >
-          <PenLine className="h-3.5 w-3.5" /> Compose
+          <PenLine className="h-3.5 w-3.5" /> Write email
         </button>
       </div>
 
       {list.length === 0 ? (
-        <p className="mt-3 text-sm text-gray-500">No emails yet.</p>
+        <p className="mt-3 text-sm text-gray-500">No emails yet. Updates are emailed automatically when you change the status or schedule an interview.</p>
       ) : (
         <ul className="mt-4 space-y-3">
           {list.map((e) => {
@@ -162,17 +182,34 @@ export default function EmailsCard({ applicationId, candidateEmail, emails, onCh
           To <span className="font-semibold text-gray-700">{candidateEmail}</span>. Sent in the HKM Vizag email design with a
           greeting and your name. Replies come back to the HR inbox.
         </p>
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {QUICK.map((q) => (
-            <button
-              key={q.label}
-              type="button"
-              onClick={() => open(q)}
-              className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-gray-600 ring-1 ring-gray-200 transition-colors hover:text-ocean hover:ring-ocean/40"
-            >
-              {q.label}
-            </button>
-          ))}
+        <div className="mt-4 rounded-xl bg-gray-50 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-semibold text-gray-600">Start from a saved draft</span>
+            <Link href="/admin/settings#email-drafts" className="inline-flex items-center gap-1 text-xs font-semibold text-ocean hover:text-navy">
+              <Settings2 className="h-3.5 w-3.5" /> Edit drafts
+            </Link>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {drafts === null ? (
+              <span className="h-7 w-40 animate-pulse rounded-full bg-gray-200" />
+            ) : drafts.length === 0 ? (
+              <span className="text-xs text-gray-400">No saved drafts yet. Add them in Settings.</span>
+            ) : (
+              drafts.map((d) => (
+                <button
+                  key={d._id}
+                  type="button"
+                  onClick={() => applyDraft(d)}
+                  aria-pressed={draftId === d._id}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ring-1 transition-colors ${
+                    draftId === d._id ? 'bg-navy text-white ring-navy' : 'bg-white text-gray-600 ring-gray-200 hover:text-ocean hover:ring-ocean/40'
+                  }`}
+                >
+                  {d.label}
+                </button>
+              ))
+            )}
+          </div>
         </div>
         <label className="mt-4 block">
           <span className="mb-1 block text-xs font-semibold text-gray-600">Subject</span>

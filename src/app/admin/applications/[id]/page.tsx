@@ -7,7 +7,6 @@ import { motion } from 'framer-motion';
 import {
   ArrowLeft,
   Mail,
-  Download,
   FileText,
   MessageSquare,
   Trash2,
@@ -16,8 +15,6 @@ import {
   User,
   Clock,
   Briefcase,
-  Building2,
-  Globe,
   Linkedin,
   Github,
   ExternalLink,
@@ -28,6 +25,10 @@ import {
   RotateCw,
   AlertTriangle,
   Ban,
+  CalendarClock,
+  ChevronDown,
+  GraduationCap,
+  PenLine,
 } from 'lucide-react';
 import {
   getAdminApplication,
@@ -81,6 +82,28 @@ function DeliveryIcon({ status }: { status: WhatsAppMessage['status'] }) {
 const formatDateTime = (iso: string) =>
   new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 
+/** One label/value pair in the compact details grid. Renders nothing without a value. */
+function Detail({ label, children, wide }: { label: string; children?: React.ReactNode; wide?: boolean }) {
+  if (children === undefined || children === null || children === '' || children === false) return null;
+  return (
+    <div className={`min-w-0 ${wide ? 'col-span-2 sm:col-span-3' : ''}`}>
+      <dt className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">{label}</dt>
+      <dd className="mt-0.5 text-sm font-semibold text-navy [overflow-wrap:anywhere]">{children}</dd>
+    </div>
+  );
+}
+
+function DetailGroup({ icon: Icon, title, children }: { icon: React.ElementType; title: string; children: React.ReactNode }) {
+  return (
+    <div className="py-4 first:pt-0 last:pb-0">
+      <h3 className="mb-2.5 flex items-center gap-1.5 text-xs font-bold text-gray-500">
+        <Icon className="h-3.5 w-3.5 text-ocean" /> {title}
+      </h3>
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">{children}</dl>
+    </div>
+  );
+}
+
 export default function ApplicationDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -98,6 +121,8 @@ export default function ApplicationDetailPage() {
   const [resending, setResending] = useState(false);
   const [promptInterview, setPromptInterview] = useState(false);
   const [roleFilled, setRoleFilled] = useState<RoleFilled | null>(null);
+  const [composeRequest, setComposeRequest] = useState(0);
+  const [scheduleRequest, setScheduleRequest] = useState(0);
 
   const handleCopyId = async () => {
     if (!app) return;
@@ -218,12 +243,39 @@ export default function ApplicationDetailPage() {
             {statuses.find((s) => s.value === app.status)?.label || app.status}
           </Badge>
         </div>
-        <div className="mt-4 rounded-xl bg-background p-3.5">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Applied For</p>
-          <p className="mt-0.5 font-bold text-navy">{jobTitle}</p>
-          <p className="mt-1 text-xs text-gray-500">
-            Came from: <span className="font-semibold capitalize text-gray-700">{app.source || 'Careers site (direct)'}</span>
-          </p>
+        <div className="mt-4 flex flex-col gap-3 rounded-xl bg-background p-3.5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Applied For</p>
+            <p className="mt-0.5 font-bold text-navy">{jobTitle}</p>
+            <p className="mt-1 text-xs text-gray-500">
+              Came from: <span className="font-semibold capitalize text-gray-700">{app.source || 'Careers site (direct)'}</span>
+            </p>
+          </div>
+          {/* The things HR does most, one tap away. */}
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setComposeRequest((n) => n + 1)}
+              className="inline-flex items-center gap-2 rounded-xl bg-navy px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-ocean"
+            >
+              <PenLine className="h-4 w-4" /> Email candidate
+            </button>
+            <button
+              type="button"
+              onClick={() => setScheduleRequest((n) => n + 1)}
+              className="inline-flex items-center gap-2 rounded-xl border border-plum/30 bg-white px-4 py-2.5 text-sm font-semibold text-plum transition-colors hover:bg-plum/5"
+            >
+              <CalendarClock className="h-4 w-4" /> {app.interview?.scheduledAt ? 'Reschedule' : 'Schedule interview'}
+            </button>
+            {app.phone && (
+              <a
+                href={`tel:${app.phone.replace(/\s/g, '')}`}
+                className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:border-ocean/40 hover:text-ocean"
+              >
+                <Phone className="h-4 w-4" /> Call
+              </a>
+            )}
+          </div>
         </div>
       </div>
 
@@ -240,145 +292,71 @@ export default function ApplicationDetailPage() {
             </motion.div>
           )}
 
-          {/* Experience */}
-          {app.isExperienced && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-hairline bg-white p-6 shadow-soft">
-              <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
-                <Briefcase className="h-5 w-5 text-ocean" /> Work Experience
-              </h2>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                {app.yearsOfExperience !== undefined && (
-                  <div className="rounded-xl bg-background p-4">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Years of Experience</p>
-                    <p className="mt-1 text-sm font-bold text-navy">{app.yearsOfExperience} year{app.yearsOfExperience !== 1 ? 's' : ''}</p>
-                  </div>
+          {/* Candidate details: personal, experience, education and profiles in one compact card */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="rounded-2xl border border-hairline bg-white p-5 shadow-soft sm:p-6">
+            <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
+              <User className="h-5 w-5 text-ocean" /> Candidate Details
+            </h2>
+            <div className="mt-4 divide-y divide-gray-100">
+              {(app.gender || app.dateOfBirth || app.location || app.currentLocation || app.availableToJoin) && (
+              <DetailGroup icon={User} title="Personal">
+                <Detail label="Gender">{app.gender ? <span className="capitalize">{app.gender.replace(/-/g, ' ')}</span> : undefined}</Detail>
+                <Detail label="Date of birth">{app.dateOfBirth ? formatDate(app.dateOfBirth) : undefined}</Detail>
+                <Detail label="Location">{app.location}</Detail>
+                <Detail label="Current location">{app.currentLocation}</Detail>
+                <Detail label="Available to join">{app.availableToJoin ? `${app.availableToJoin} days` : undefined}</Detail>
+              </DetailGroup>
+              )}
+              <DetailGroup icon={Briefcase} title="Experience">
+                {app.isExperienced ? (
+                  <>
+                    <Detail label="Experience">
+                      {app.yearsOfExperience !== undefined ? `${app.yearsOfExperience} year${app.yearsOfExperience !== 1 ? 's' : ''}` : 'Experienced'}
+                    </Detail>
+                    <Detail label="Last employer">{app.lastEmployer}</Detail>
+                    <Detail label="Worked">
+                      {app.lastEmploymentFrom
+                        ? `${formatDate(app.lastEmploymentFrom)} – ${app.lastEmploymentTo ? formatDate(app.lastEmploymentTo) : 'now'}`
+                        : undefined}
+                    </Detail>
+                  </>
+                ) : (
+                  <Detail label="Experience">Fresher</Detail>
                 )}
-                {app.lastEmployer && (
-                  <div className="rounded-xl bg-background p-4">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Last Employer</p>
-                    <p className="mt-1 text-sm font-bold text-navy">{app.lastEmployer}</p>
-                  </div>
-                )}
-                {app.lastEmploymentFrom && (
-                  <div className="rounded-xl bg-background p-4">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Employment From</p>
-                    <p className="mt-1 text-sm font-bold text-navy">{formatDate(app.lastEmploymentFrom)}</p>
-                  </div>
-                )}
-                {app.lastEmploymentTo && (
-                  <div className="rounded-xl bg-background p-4">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Employment To</p>
-                    <p className="mt-1 text-sm font-bold text-navy">{formatDate(app.lastEmploymentTo)}</p>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
-
-          {/* Personal Details */}
-          {(app.location || app.gender || app.dateOfBirth) && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-hairline bg-white p-6 shadow-soft">
-              <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
-                <User className="h-5 w-5 text-ocean" /> Personal Details
-              </h2>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                {app.location && (
-                  <div className="rounded-xl bg-background p-4">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Location</p>
-                    <p className="mt-1 text-sm font-bold text-navy">{app.location}</p>
-                  </div>
-                )}
-                {app.gender && (
-                  <div className="rounded-xl bg-background p-4">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Gender</p>
-                    <p className="mt-1 text-sm font-bold text-navy capitalize">{app.gender.replace(/-/g, ' ')}</p>
-                  </div>
-                )}
-                {app.dateOfBirth && (
-                  <div className="rounded-xl bg-background p-4">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Date of Birth</p>
-                    <p className="mt-1 text-sm font-bold text-navy">{formatDate(app.dateOfBirth)}</p>
-                  </div>
-                )}
-                {app.currentLocation && (
-                  <div className="rounded-xl bg-background p-4">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Current Location</p>
-                    <p className="mt-1 text-sm font-bold text-navy">{app.currentLocation}</p>
-                  </div>
-                )}
-                {app.availableToJoin && (
-                  <div className="rounded-xl bg-background p-4">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Available to Join</p>
-                    <p className="mt-1 text-sm font-bold text-navy">{app.availableToJoin} days</p>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
-
-          {/* Educational Details */}
-          {(app.highestDegree || app.collegeName) && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-hairline bg-white p-6 shadow-soft">
-              <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
-                <Building2 className="h-5 w-5 text-ocean" /> Educational Details
-              </h2>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                {app.highestDegree && (
-                  <div className="rounded-xl bg-background p-4">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Highest Degree</p>
-                    <p className="mt-1 text-sm font-bold text-navy">{app.highestDegree}</p>
-                  </div>
-                )}
-                {app.collegeName && (
-                  <div className="rounded-xl bg-background p-4">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">College / University</p>
-                    <p className="mt-1 text-sm font-bold text-navy">{app.collegeName}</p>
-                  </div>
-                )}
-                {app.collegeCity && (
-                  <div className="rounded-xl bg-background p-4">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">College City</p>
-                    <p className="mt-1 text-sm font-bold text-navy">{app.collegeCity}</p>
-                  </div>
-                )}
-                {app.studyYears && (
-                  <div className="rounded-xl bg-background p-4">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Study Years</p>
-                    <p className="mt-1 text-sm font-bold text-navy">{app.studyYears}</p>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
-
-          {/* Online Profiles */}
-          {(app.linkedinUrl || app.githubUrl || app.portfolioUrl) && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-hairline bg-white p-6 shadow-soft">
-              <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
-                <Globe className="h-5 w-5 text-ocean" /> Online Profiles
-              </h2>
-              <div className="mt-4 space-y-2">
-                {app.linkedinUrl && (
-                  <a href={app.linkedinUrl} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-3 rounded-xl bg-background p-3 text-sm text-ocean hover:bg-ocean/5 transition-colors">
-                    <Linkedin className="h-4 w-4" /> {app.linkedinUrl}
-                  </a>
-                )}
-                {app.githubUrl && (
-                  <a href={app.githubUrl} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-3 rounded-xl bg-background p-3 text-sm text-ocean hover:bg-ocean/5 transition-colors">
-                    <Github className="h-4 w-4" /> {app.githubUrl}
-                  </a>
-                )}
-                {app.portfolioUrl && (
-                  <a href={app.portfolioUrl} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-3 rounded-xl bg-background p-3 text-sm text-ocean hover:bg-ocean/5 transition-colors">
-                    <ExternalLink className="h-4 w-4" /> {app.portfolioUrl}
-                  </a>
-                )}
-              </div>
-            </motion.div>
-          )}
+              </DetailGroup>
+              {(app.highestDegree || app.collegeName) && (
+                <DetailGroup icon={GraduationCap} title="Education">
+                  <Detail label="Highest degree">{app.highestDegree}</Detail>
+                  <Detail label="Years">{app.studyYears}</Detail>
+                  <Detail label="College / University" wide>
+                    {app.collegeName ? `${app.collegeName}${app.collegeCity ? `, ${app.collegeCity}` : ''}` : undefined}
+                  </Detail>
+                </DetailGroup>
+              )}
+              {(app.linkedinUrl || app.githubUrl || app.portfolioUrl) && (
+                <div className="flex flex-wrap gap-2 pt-4">
+                  {[
+                    { url: app.linkedinUrl, label: 'LinkedIn', icon: Linkedin },
+                    { url: app.githubUrl, label: 'GitHub', icon: Github },
+                    { url: app.portfolioUrl, label: 'Portfolio', icon: ExternalLink },
+                  ]
+                    .filter((l) => l.url)
+                    .map((l) => (
+                      <a
+                        key={l.label}
+                        href={l.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={l.url}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-ocean/5 px-3 py-1.5 text-xs font-semibold text-ocean transition-colors hover:bg-ocean/10"
+                      >
+                        <l.icon className="h-3.5 w-3.5" /> {l.label}
+                      </a>
+                    ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
 
           {/* Cover Letter */}
           {app.coverLetter && (
@@ -422,14 +400,40 @@ export default function ApplicationDetailPage() {
             <h2 className="text-base font-bold text-gray-900">Update Status</h2>
             <div className="mt-3 space-y-1.5">
               {statuses.map((s) => (
-                <button key={s.value} onClick={() => s.value !== app.status && setStatusConfirm(s.value)}
-                  className={`w-full rounded-xl px-4 py-3 text-left text-sm font-semibold transition-all ${app.status === s.value ? `${s.color} shadow-sm` : 'text-gray-500 hover:bg-gray-50'}`}>
+                <button key={s.value} onClick={() => {
+                  if (s.value === app.status) return;
+                  // Moving to Interview opens the scheduler, whose email carries the date and time: skip the extra one.
+                  setNotifyCandidate(!(s.value === 'interview' && !app.interview?.scheduledAt));
+                  setStatusConfirm(s.value);
+                }}
+                  aria-current={app.status === s.value ? 'true' : undefined}
+                  className={`w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold transition-all ${app.status === s.value ? `${s.color} shadow-sm` : 'text-gray-500 hover:bg-gray-50'}`}>
                   {app.status === s.value && <span className="mr-2 inline-block h-2 w-2 rounded-full bg-current" />}
                   {s.label}
                 </button>
               ))}
             </div>
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={resending}
+              className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-ocean hover:text-navy disabled:opacity-50"
+              title="Email the candidate the update for the current status again"
+            >
+              <RotateCw className={`h-3.5 w-3.5 ${resending ? 'animate-spin' : ''}`} /> Re-send status email
+            </button>
           </motion.div>
+
+          <EmailsCard
+            applicationId={app._id}
+            candidateEmail={app.email}
+            emails={app.emails || []}
+            onChange={(emails) => setApp((a) => (a ? { ...a, emails } : a))}
+            composeRequest={composeRequest}
+            candidateName={app.name}
+            jobTitle={jobTitle === '—' ? '' : jobTitle}
+            applicationNo={app.applicationNumber || ''}
+          />
 
           <InterviewCard
             applicationId={app._id}
@@ -437,6 +441,7 @@ export default function ApplicationDetailPage() {
             jobTitle={jobTitle}
             interview={app.interview}
             startEditing={promptInterview}
+            openRequest={scheduleRequest}
             onChange={(interview) => { setApp((a) => (a ? { ...a, interview } : a)); setPromptInterview(false); }}
             onMessage={() => load()}
           />
@@ -447,35 +452,18 @@ export default function ApplicationDetailPage() {
             onChange={(followUps) => setApp((a) => (a ? { ...a, followUps } : a))}
           />
 
-          <EmailsCard
-            applicationId={app._id}
-            candidateEmail={app.email}
-            emails={app.emails || []}
-            onChange={(emails) => setApp((a) => (a ? { ...a, emails } : a))}
-          />
-
-          {/* WhatsApp messages */}
-          <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 }} className="rounded-2xl border border-hairline bg-white p-6 shadow-soft">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
-                <MessageCircle className="h-5 w-5 text-emerald-500" /> WhatsApp Messages
-              </h2>
-              <button
-                type="button"
-                onClick={handleResend}
-                disabled={resending}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-navy/5 px-3 py-2 text-xs font-semibold text-navy transition-colors hover:bg-navy/10 disabled:opacity-50"
-                title="Re-send the message for the current status"
-              >
-                <RotateCw className={`h-3.5 w-3.5 ${resending ? 'animate-spin' : ''}`} /> Resend
-              </button>
-            </div>
-            {(!app.whatsappMessages || app.whatsappMessages.length === 0) ? (
-              <p className="mt-3 text-sm text-gray-500">No messages sent to this candidate yet.</p>
-            ) : (
+          {/* WhatsApp is no longer used; earlier messages stay viewable. */}
+          {!!app.whatsappMessages?.length && (
+            <details className="group rounded-2xl border border-hairline bg-white p-5 shadow-soft">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-bold text-gray-700">
+                <span className="flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4 text-emerald-500" /> Earlier WhatsApp messages ({app.whatsappMessages.length})
+                </span>
+                <ChevronDown className="h-4 w-4 text-gray-400 transition-transform group-open:rotate-180" />
+              </summary>
               <ul className="mt-4 space-y-3">
                 {[...app.whatsappMessages].reverse().map((m) => {
-                  const st = deliveryStyles[m.status];
+                  const st = deliveryStyles[m.status] || deliveryStyles.submitted;
                   const about = m.kind === 'received'
                     ? 'Application received'
                     : m.kind === 'interview'
@@ -495,8 +483,8 @@ export default function ApplicationDetailPage() {
                   );
                 })}
               </ul>
-            )}
-          </motion.div>
+            </details>
+          )}
 
           {/* Actions */}
           <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-hairline bg-white p-6 shadow-soft">
@@ -529,8 +517,12 @@ export default function ApplicationDetailPage() {
               className="mt-0.5 h-4 w-4 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500"
             />
             <span>
-              <span className="flex items-center gap-1.5 font-semibold"><MessageCircle className="h-4 w-4" /> Notify candidate (WhatsApp + email)</span>
-              <span className="mt-0.5 block text-xs text-emerald-800/80">Sends the status update to {app.phone || 'their phone'} and {app.email}.</span>
+              <span className="flex items-center gap-1.5 font-semibold"><Mail className="h-4 w-4" /> Email the candidate</span>
+              <span className="mt-0.5 block text-xs text-emerald-800/80">
+                {statusConfirm === 'interview' && !app.interview?.scheduledAt
+                  ? 'Usually not needed: the scheduler opens next, and scheduling emails them the date and time.'
+                  : `Sends the status update to ${app.email}.`}
+              </span>
             </span>
           </label>
         )}

@@ -7,6 +7,7 @@ import type {
   WhatsAppMessage,
   Department,
   QualificationOption,
+  EmailDraft,
   DashboardStats,
   AdminUser,
   AuthUser,
@@ -199,6 +200,30 @@ export async function updateQualificationOption(id: string, label: string): Prom
 
 export async function deleteQualificationOption(id: string): Promise<void> {
   await api.delete(`/qualification-options/${id}`);
+}
+
+export async function getEmailDrafts(): Promise<EmailDraft[]> {
+  const { data } = await api.get("/email-drafts");
+  return data;
+}
+
+export async function createEmailDraft(draft: Pick<EmailDraft, "label" | "subject" | "message">): Promise<EmailDraft> {
+  const { data } = await api.post("/email-drafts", draft);
+  return data;
+}
+
+export async function updateEmailDraft(id: string, draft: Pick<EmailDraft, "label" | "subject" | "message">): Promise<EmailDraft> {
+  const { data } = await api.put(`/email-drafts/${id}`, draft);
+  return data;
+}
+
+export async function reorderEmailDrafts(ids: string[]): Promise<EmailDraft[]> {
+  const { data } = await api.put("/email-drafts/order", { ids });
+  return data;
+}
+
+export async function deleteEmailDraft(id: string): Promise<void> {
+  await api.delete(`/email-drafts/${id}`);
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {

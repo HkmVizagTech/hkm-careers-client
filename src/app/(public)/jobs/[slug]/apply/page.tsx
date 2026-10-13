@@ -370,6 +370,12 @@ export default function ApplyPage() {
   const genderOnlyMessage = genderOnly
     ? `This position is open to ${GENDER_ONLY_LABEL[genderOnly]} applicants only.`
     : '';
+  // Single-gender jobs: the picker only offers that gender, already selected.
+  const genderOptions = genderOnly ? GENDER_OPTIONS.filter((o) => o.value === genderOnly) : GENDER_OPTIONS;
+  useEffect(() => {
+    if (genderOnly && watch('gender') !== genderOnly) setValue('gender', genderOnly, { shouldValidate: false });
+  }, [genderOnly]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const validateGender = () => {
     if (!genderMismatch(watch('gender'))) return true;
     setError('gender', { type: 'manual', message: genderOnlyMessage });
@@ -866,7 +872,7 @@ export default function ApplyPage() {
                               if (genderMismatch(v)) setError('gender', { type: 'manual', message: genderOnlyMessage });
                               else clearErrors('gender');
                             }}
-                            options={GENDER_OPTIONS}
+                            options={genderOptions}
                             placeholder="Select gender"
                             error={!!errors.gender}
                             icon={User}

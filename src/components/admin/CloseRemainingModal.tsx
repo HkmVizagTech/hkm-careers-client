@@ -17,7 +17,7 @@ interface Props {
 
 /**
  * "Position filled" / "Close job" dialog: closes the job and moves everyone still in
- * progress to Not Selected, optionally sending them the Not Selected WhatsApp.
+ * progress to Not Selected, optionally sending them the Not Selected email.
  */
 export default function CloseRemainingModal({ target, onClose, onDone }: Props) {
   const [info, setInfo] = useState<JobPipeline | null>(null);
@@ -40,7 +40,7 @@ export default function CloseRemainingModal({ target, onClose, onDone }: Props) 
       const res = await closeJobRemaining(target.jobId, notify);
       toast.success(
         res.updated
-          ? `${res.updated} applicant${res.updated === 1 ? '' : 's'} moved to Not Selected${notify ? ' and are being messaged on WhatsApp' : ''}`
+          ? `${res.updated} applicant${res.updated === 1 ? '' : 's'} moved to Not Selected${notify ? ' and are being emailed' : ''}`
           : 'Job closed'
       );
       onDone?.(res.updated);
@@ -91,7 +91,7 @@ export default function CloseRemainingModal({ target, onClose, onDone }: Props) 
             className="mt-0.5 h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
           />
           <span>
-            Send them the &quot;Not Selected&quot; WhatsApp message
+            Send them the &quot;Not Selected&quot; email
             <span className="block text-xs text-gray-500">
               &quot;Thank you for your interest… We encourage you to apply for other openings.&quot;
             </span>
