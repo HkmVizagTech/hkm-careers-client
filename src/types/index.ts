@@ -162,14 +162,25 @@ export interface EmailLog {
 }
 
 /** Result of a WhatsApp attempt, with the matching email attempt attached. */
-export type CandidateNotification = WhatsAppMessage & { email?: Pick<EmailLog, "status" | "error"> };
+/** A WhatsApp attempt (status "off" when WhatsApp is turned off for that message) plus the email result. */
+export type CandidateNotification = (WhatsAppMessage | (Omit<WhatsAppMessage, "status"> & { status: "off" })) & {
+  email?: Pick<EmailLog, "status" | "error">;
+};
 
 export interface MailStatus {
   configured: boolean;
-  via: "gmail-api" | "smtp" | null;
+  via: "graph" | "gmail-api" | "smtp" | null;
   from: string | null;
   replyTo: string | null;
   hrRecipients: string[];
+  /** SMTP only */
+  host?: string;
+  port?: number;
+  user?: string;
+  /** Graph only */
+  mailbox?: string;
+  /** Which candidate messages still go on WhatsApp (WHATSAPP_SEND). */
+  whatsapp?: { received: boolean; status: boolean; interview: boolean };
 }
 
 export interface Application {

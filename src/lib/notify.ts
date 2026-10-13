@@ -8,6 +8,13 @@ import type { CandidateNotification } from '@/types';
  */
 export function reportDelivery(n: CandidateNotification | null | undefined, done: string) {
   if (!n) return toast.success(done);
+  if (n.status === 'off') {
+    // WhatsApp is turned off for this message: only email went out.
+    if (!n.email) return toast.success(done);
+    return n.email.status === 'sent'
+      ? toast.success(`${done}. Sent by email.`)
+      : (n.email.status === 'failed' ? toast.error : toast.info)(`${done}. Email not sent (${n.email.error || n.email.status}).`);
+  }
   const wa = n.status === 'failed' || n.status === 'skipped' ? { ok: false, why: n.error || n.status } : { ok: true, why: '' };
   const em = n.email
     ? n.email.status === 'sent'

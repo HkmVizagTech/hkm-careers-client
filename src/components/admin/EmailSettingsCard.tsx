@@ -7,7 +7,7 @@ import { getMailStatus, sendTestEmail } from '@/lib/services';
 import { toast } from '@/lib/toast';
 import type { MailStatus } from '@/types';
 
-const VIA_LABEL: Record<string, string> = { 'gmail-api': 'Gmail API', smtp: 'SMTP' };
+const VIA_LABEL: Record<string, string> = { graph: 'Microsoft 365', 'gmail-api': 'Gmail API', smtp: 'email + password (SMTP)' };
 
 /** Settings → Email: shows whether sending is set up and sends a test message. */
 export default function EmailSettingsCard({ defaultTo }: { defaultTo?: string }) {
@@ -59,12 +59,22 @@ export default function EmailSettingsCard({ defaultTo }: { defaultTo?: string })
             {status.configured ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
             {status.configured
               ? `Email is set up (${VIA_LABEL[status.via || ''] || status.via})`
-              : 'Email is not set up yet. Add the MAIL / GMAIL settings in Railway.'}
+              : 'Email is not set up yet. Add the SMTP_USER, SMTP_PASS and MAIL_FROM settings in Railway.'}
           </div>
           <dl className="mt-2 divide-y divide-gray-100">
             <Row k="Sends from" v={status.from || '—'} />
             <Row k="Replies go to" v={status.replyTo || status.from || '—'} />
+            {status.via === 'smtp' && status.host && <Row k="Mail server" v={`${status.host}:${status.port}`} />}
             <Row k="New-application alerts" v={status.hrRecipients.length ? status.hrRecipients.join(', ') : 'Off'} />
+            {status.whatsapp && (
+              <Row
+                k="WhatsApp messages"
+                v={(() => {
+                  const on = Object.entries(status.whatsapp).filter(([, v]) => v).map(([k]) => ({ received: 'application received', status: 'status updates', interview: 'interviews' })[k]);
+                  return on.length === 3 ? 'All (email is sent too)' : on.length ? `Only ${on.join(', ')}` : 'Off (email only)';
+                })()}
+              />
+            )}
           </dl>
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
             <input
