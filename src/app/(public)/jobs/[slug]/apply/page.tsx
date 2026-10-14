@@ -36,7 +36,6 @@ import {
   Eye,
   Pencil,
   Search,
-  MessageCircle,
   Info,
   ListChecks,
 } from 'lucide-react';
@@ -746,10 +745,6 @@ export default function ApplyPage() {
     }
   };
 
-  const whatsappText = encodeURIComponent(
-    `My application for ${job?.title || 'the position'} at HKM Vizag was submitted successfully! 🎉\n\nApplication ID: ${applicationId}\n\nI can track its status anytime here: ${typeof window !== 'undefined' ? window.location.origin : ''}/track?id=${applicationId}`,
-  );
-
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center bg-background">
@@ -806,23 +801,17 @@ export default function ApplyPage() {
                   </p>
                   <div className="mt-3 rounded-xl bg-green-50 px-4 py-3 text-left">
                     <p className="flex items-start gap-2 text-xs leading-relaxed text-green-800">
-                      <MessageCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                      Tip: share or save your Application ID via WhatsApp so you always have it —
-                      you&apos;ll need it to track your status.
+                      <Mail className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      Keep this Application ID to track your status. It&apos;s also in the confirmation
+                      email we&apos;ve sent you.
                     </p>
                   </div>
                 </div>
               </div>
             )}
             <div className="mt-10 flex flex-wrap justify-center gap-3">
-              <a href={`https://wa.me/?text=${whatsappText}`} target="_blank" rel="noopener noreferrer">
-                <Button variant="primary" size="lg" className="bg-[#25D366] hover:bg-[#1fb857]">
-                  <MessageCircle className="h-4 w-4" />
-                  Send via WhatsApp
-                </Button>
-              </a>
               <Link href={`/track?id=${applicationId}`}>
-                <Button variant="outline" size="lg">
+                <Button variant="primary" size="lg">
                   <Search className="h-4 w-4" />
                   Track Status
                 </Button>

@@ -12,6 +12,7 @@ const pageTitles: [string, string][] = [
   ['/admin/dashboard', 'Dashboard'],
   ['/admin/jobs', 'Jobs'],
   ['/admin/applications', 'Applications'],
+  ['/admin/employees', 'Employees'],
   ['/admin/departments', 'Departments'],
   ['/admin/settings', 'Settings & Team'],
 ];

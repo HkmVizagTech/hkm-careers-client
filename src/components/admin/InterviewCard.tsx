@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { CalendarClock, CalendarPlus, MapPin, Pencil, Phone, Send, Video, X } from 'lucide-react';
+import { CalendarCheck, CalendarClock, CalendarPlus, Check, MapPin, Pencil, Phone, Send, Video, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { DateTimePicker, describeDateTime, isCompleteDateTime } from '@/components/ui/DateTimePicker';
@@ -34,6 +34,19 @@ function placeOf(iv?: Interview | null) {
   const text = (iv.location || '').trim();
   const link = text.match(/https?:\/\/\S+/)?.[0] || '';
   return { venue: text.replace(/https?:\/\/\S+/, '').trim(), link };
+}
+
+/** "Wednesday, 14 October · 12:00 pm" and "Today" / "Tomorrow" / "In 5 days" for a picker value. */
+function longWhen(value: string) {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return { text: '', relative: '' };
+  const opts: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long' };
+  if (d.getFullYear() !== new Date().getFullYear()) opts.year = 'numeric';
+  const time = d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
+  const startOf = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const days = Math.round((startOf(d) - startOf(new Date())) / 86400000);
+  const relative = days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : days > 1 ? `In ${days} days` : '';
+  return { text: `${d.toLocaleDateString('en-IN', opts)} · ${time}`, relative };
 }
 
 /** Light check before saving; the server does the real validation. */
@@ -84,6 +97,13 @@ export default function InterviewCard({ applicationId, candidateName, jobTitle, 
   const [notify, setNotify] = useState(true);
   const [shareLater, setShareLater] = useState(false);
   const [resending, setResending] = useState(false);
+  /** The date/time picker folds into a one-line summary once a time is chosen. */
+  const [pickingWhen, setPickingWhen] = useState(true);
+  /** Fold the picker and bring the summary + "How" into view (the calendar may have been scrolled past). */
+  const doneWhen = () => {
+    setPickingWhen(false);
+    requestAnimationFrame(() => document.getElementById('iv-when')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+  };
 
   const openForm = () => {
     setWhen(scheduled ? toDateTimeLocal(scheduled.scheduledAt) : '');
@@ -96,6 +116,7 @@ export default function InterviewCard({ applicationId, candidateName, jobTitle, 
     setShareLater(!!scheduled && !place.venue && !place.link);
     setNotes(scheduled?.notes || '');
     setNotify(true);
+    setPickingWhen(!scheduled);
     setEditing(true);
   };
 
@@ -144,7 +165,8 @@ export default function InterviewCard({ applicationId, candidateName, jobTitle, 
       });
       onChange(res.interview);
       setEditing(false);
-      reportMessage(res.notification, scheduled ? 'Interview rescheduled' : 'Interview scheduled');
+      const done = scheduled ? 'Interview rescheduled' : 'Interview scheduled';
+      reportMessage(res.notification, res.statusChangedTo ? `${done} and status moved to Interview` : done);
       if (res.notification) onMessage?.();
     } catch {
       toast.error('Could not save the interview');
@@ -271,8 +293,50 @@ export default function InterviewCard({ applicationId, candidateName, jobTitle, 
         </p>
         <div className="mt-5 space-y-6">
           <section aria-labelledby="iv-when">
-            <h3 id="iv-when" className="mb-3 text-sm font-bold text-navy">1. When</h3>
-            <DateTimePicker value={when} onChange={setWhen} idPrefix="iv" />
+            <h3 id="iv-when" className="mb-3 flex items-center gap-1.5 text-sm font-bold text-navy">
+              1. When {!pickingWhen && isCompleteDateTime(when) && <Check className="h-4 w-4 text-emerald-600" aria-label="chosen" />}
+            </h3>
+            {pickingWhen || !isCompleteDateTime(when) ? (
+              <>
+                <DateTimePicker
+                  value={when}
+                  onChange={setWhen}
+                  idPrefix="iv"
+                  // Short pause so the chosen slot is seen being selected before the picker folds away.
+                  onTimePicked={() => setTimeout(doneWhen, 250)}
+                />
+                {isCompleteDateTime(when) && (
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={doneWhen}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-plum/10 px-3 py-1.5 text-xs font-semibold text-plum hover:bg-plum/15"
+                    >
+                      <Check className="h-3.5 w-3.5" /> Done · {describeDateTime(when)}
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-plum/25 bg-plum/[0.06] px-4 py-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-plum shadow-sm">
+                  <CalendarCheck className="h-5 w-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  {longWhen(when).relative && (
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-plum/80">{longWhen(when).relative}</p>
+                  )}
+                  <p className="text-base font-bold text-navy">{longWhen(when).text}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPickingWhen(true)}
+                  className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-plum/30 bg-white px-3 py-2 text-xs font-semibold text-plum transition-colors hover:bg-plum/5 sm:w-auto"
+                >
+                  <Pencil className="h-3.5 w-3.5" /> Change date &amp; time
+                </button>
+              </div>
+            )}
           </section>
 
           <section aria-labelledby="iv-how" className="grid gap-5 border-t border-hairline pt-5 sm:grid-cols-2">

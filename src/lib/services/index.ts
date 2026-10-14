@@ -11,6 +11,9 @@ import type {
   DocumentRequest,
   CandidateDocumentView,
   JobAlertSubscriber,
+  Employee,
+  EmployeeListItem,
+  EmployeeInput,
   DashboardStats,
   AdminUser,
   AuthUser,
@@ -305,7 +308,7 @@ export async function getAttentionSummary(): Promise<AttentionSummary> {
 export async function scheduleInterview(
   id: string,
   interview: { scheduledAt: string; mode?: string; venue?: string; link?: string; notes?: string; notify?: boolean }
-): Promise<{ interview: Interview; notification: CandidateNotification | null }> {
+): Promise<{ interview: Interview; notification: CandidateNotification | null; status?: string; statusChangedTo?: string | null }> {
   const { data } = await api.put(`/applications/${id}/interview`, interview);
   return data;
 }
@@ -476,8 +479,8 @@ export async function reviewDocumentItem(
   id: string,
   rid: string,
   iid: string,
-  input: { status: "approved" | "rejected" | "uploaded"; note?: string }
-): Promise<{ requests: DocumentRequest[] }> {
+  input: { status: "approved" | "rejected" | "uploaded"; note?: string; notify?: boolean }
+): Promise<{ requests: DocumentRequest[]; email?: { status: string; error?: string } | null }> {
   const { data } = await api.patch(`/applications/${id}/documents/${rid}/items/${iid}`, input);
   return data;
 }
@@ -497,6 +500,54 @@ export async function revealBankAccount(id: string, rid: string): Promise<string
 
 export async function deleteDocumentRequest(id: string, rid: string): Promise<{ requests: DocumentRequest[] }> {
   const { data } = await api.delete(`/applications/${id}/documents/${rid}`);
+  return data;
+}
+
+// HR adding / updating documents themselves
+type Requests = { requests: DocumentRequest[] };
+
+export async function addDocumentItem(id: string, rid: string, input: { label: string; required?: boolean }): Promise<Requests> {
+  const { data } = await api.post(`/applications/${id}/documents/${rid}/items`, input);
+  return data;
+}
+
+export async function updateDocumentItem(id: string, rid: string, iid: string, input: { label?: string; required?: boolean }): Promise<Requests> {
+  const { data } = await api.put(`/applications/${id}/documents/${rid}/items/${iid}`, input);
+  return data;
+}
+
+export async function removeDocumentItem(id: string, rid: string, iid: string): Promise<Requests> {
+  const { data } = await api.delete(`/applications/${id}/documents/${rid}/items/${iid}`);
+  return data;
+}
+
+export async function adminUploadDocument(
+  id: string,
+  rid: string,
+  iid: string,
+  file: File,
+  onProgress?: (pct: number) => void
+): Promise<Requests> {
+  const form = new FormData();
+  form.append("file", file);
+  const { data } = await api.post(`/applications/${id}/documents/${rid}/items/${iid}/files`, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+    onUploadProgress: (e) => e.total && onProgress?.(Math.round((e.loaded / e.total) * 100)),
+  });
+  return data;
+}
+
+export async function adminRemoveDocumentFile(id: string, rid: string, iid: string, fid: string): Promise<Requests> {
+  const { data } = await api.delete(`/applications/${id}/documents/${rid}/items/${iid}/files/${fid}`);
+  return data;
+}
+
+export async function adminSaveBankDetails(
+  id: string,
+  rid: string,
+  input: { holder: string; account?: string; ifsc: string; bankName: string; branch?: string; accountType: string }
+): Promise<Requests> {
+  const { data } = await api.put(`/applications/${id}/documents/${rid}/bank`, input);
   return data;
 }
 
@@ -612,4 +663,72 @@ export async function sendTestEmail(to?: string): Promise<{ ok: boolean; error?:
     const e = err as { response?: { data?: { error?: string; to?: string } } };
     return { ok: false, error: e.response?.data?.error || "Could not send", to: e.response?.data?.to || to || "" };
   }
+}
+
+// ---------------------------------------------------------------- employees
+
+export async function getEmployees(params: { q?: string; status?: string; department?: string } = {}): Promise<{
+  employees: EmployeeListItem[];
+  counts: { active: number; left: number; total: number };
+}> {
+  const { data } = await api.get("/employees", { params });
+  return data;
+}
+
+export async function getEmployee(id: string): Promise<Employee> {
+  const { data } = await api.get(`/employees/${id}`);
+  return data;
+}
+
+export async function createEmployee(input: EmployeeInput): Promise<Employee> {
+  const { data } = await api.post("/employees", input);
+  return data;
+}
+
+export async function createEmployeeFromApplication(appId: string, input: EmployeeInput): Promise<Employee> {
+  const { data } = await api.post(`/employees/from-application/${appId}`, input);
+  return data;
+}
+
+export async function updateEmployee(id: string, input: EmployeeInput): Promise<Employee> {
+  const { data } = await api.put(`/employees/${id}`, input);
+  return data;
+}
+
+export async function deleteEmployee(id: string): Promise<void> {
+  await api.delete(`/employees/${id}`);
+}
+
+export async function revealEmployeeField(id: string, field: "aadhaar" | "pan" | "account"): Promise<string> {
+  const { data } = await api.get(`/employees/${id}/reveal/${field}`);
+  return data.value;
+}
+
+export async function uploadEmployeeDocument(id: string, label: string, file: File, onProgress?: (pct: number) => void): Promise<Employee> {
+  const form = new FormData();
+  form.append("label", label);
+  form.append("file", file);
+  const { data } = await api.post(`/employees/${id}/documents`, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+    onUploadProgress: (e) => e.total && onProgress?.(Math.round((e.loaded / e.total) * 100)),
+  });
+  return data;
+}
+
+export async function renameEmployeeDocument(id: string, fid: string, label: string): Promise<Employee> {
+  const { data } = await api.patch(`/employees/${id}/documents/${fid}`, { label });
+  return data;
+}
+
+export async function deleteEmployeeDocument(id: string, fid: string): Promise<Employee> {
+  const { data } = await api.delete(`/employees/${id}/documents/${fid}`);
+  return data;
+}
+
+export async function fetchEmployeeDocument(id: string, fid: string, inline: boolean) {
+  const { data, headers } = await api.get(`/employees/${id}/documents/${fid}`, {
+    params: inline ? { inline: 1 } : undefined,
+    responseType: "blob",
+  });
+  return { blob: data as Blob, name: fileNameFrom(String(headers["content-disposition"] || ""), "document") };
 }

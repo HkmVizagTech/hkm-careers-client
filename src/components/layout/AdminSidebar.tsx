@@ -8,6 +8,7 @@ import {
   FileText,
   Building2,
   Settings,
+  Users,
   ExternalLink,
   X,
 } from 'lucide-react';
@@ -23,6 +24,7 @@ const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/jobs', label: 'Jobs', icon: Briefcase },
   { href: '/admin/applications', label: 'Applications', icon: FileText },
+  { href: '/admin/employees', label: 'Employees', icon: Users },
   { href: '/admin/departments', label: 'Departments', icon: Building2 },
   { href: '/admin/settings', label: 'Settings & Team', icon: Settings },
 ];

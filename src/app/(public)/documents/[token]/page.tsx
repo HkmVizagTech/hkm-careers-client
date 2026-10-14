@@ -69,6 +69,8 @@ export default function DocumentUploadPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [justSubmitted, setJustSubmitted] = useState(false);
+  /** After submitting, a thank-you screen replaces the form until they choose to look at their uploads again. */
+  const [reviewing, setReviewing] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -144,6 +146,7 @@ export default function DocumentUploadPage() {
     try {
       setView(await submitRequestedDocuments(token));
       setJustSubmitted(true);
+      setReviewing(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       if (!handleGone(err)) setSubmitError(errorMessage(err, 'Could not submit. Please try again.'));
@@ -151,6 +154,20 @@ export default function DocumentUploadPage() {
       setSubmitting(false);
     }
   };
+
+  if ((completed || (submitted && rejected.length === 0)) && !reviewing) {
+    return (
+      <ThankYou
+        view={view}
+        completed={completed}
+        justSubmitted={justSubmitted}
+        onReview={() => {
+          setReviewing(true);
+          window.scrollTo({ top: 0, behavior: 'auto' });
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-white to-white">
@@ -220,7 +237,16 @@ export default function DocumentUploadPage() {
         {view.items.length > 0 && (
           <section className="mt-6">
             <h2 className="text-sm font-bold uppercase tracking-wider text-navy">Documents</h2>
-            <p className="mt-1 text-xs text-gray-500">PDF, JPG, PNG, WEBP, HEIC or Word · up to 10 MB each · a clear phone photo is fine.</p>
+            <div className="mt-2 flex gap-2.5 rounded-xl border border-ocean/15 bg-ocean/[0.04] px-3.5 py-3 text-xs leading-relaxed text-gray-700">
+              <FileText className="mt-0.5 h-4 w-4 shrink-0 text-ocean" />
+              <div>
+                <p className="font-semibold text-navy">Accepted files</p>
+                <p>
+                  PDF, JPG, JPEG, PNG, WEBP, HEIC (iPhone photos), DOC or DOCX · up to <strong>10 MB</strong> per file · up to 5 files per document.
+                </p>
+                <p className="text-gray-500">A clear phone photo of the original is fine. For a document with several pages, add each page or upload one PDF.</p>
+              </div>
+            </div>
             <ul className="mt-3 space-y-3">
               {view.items.map((item) => (
                 <DocumentRow key={item._id} token={token} item={item} onChange={setView} onGone={handleGone} />
@@ -258,6 +284,136 @@ export default function DocumentUploadPage() {
           Your files and bank details are encrypted and only the HKM Vizag HR team can see them. Please don&apos;t share this link with anyone.
         </p>
         <HrContact className="mt-6" />
+      </div>
+    </div>
+  );
+}
+
+/** Shown after the candidate submits (and when everything is approved). */
+function ThankYou({
+  view,
+  completed,
+  justSubmitted,
+  onReview,
+}: {
+  view: CandidateDocumentView;
+  completed: boolean;
+  justSubmitted: boolean;
+  onReview: () => void;
+}) {
+  const joining = view.kind === 'joining';
+  const name = view.firstName || 'there';
+  const sent = view.items.filter((i) => i.files.length > 0);
+  const steps = completed
+    ? [
+        { title: 'Documents approved', text: 'HR has checked and approved everything you sent.' },
+        {
+          title: joining ? 'Joining details' : 'Next steps',
+          text: joining ? 'HR will be in touch about your joining date and first day.' : 'We will keep you updated about your application by email.',
+        },
+      ]
+    : [
+        { title: 'HR reviews your documents', text: 'Each document is checked by the HKM Vizag HR team.' },
+        {
+          title: 'If anything needs fixing',
+          text: 'We’ll email you with the reason. Just open this same link and upload a new file.',
+        },
+        {
+          title: joining ? 'Get ready to join' : 'We’ll keep you posted',
+          text: joining ? 'Once approved, HR will confirm your joining date and first-day details.' : 'You’ll hear from us by email about the next step.',
+        },
+      ];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background via-white to-emerald-50/40">
+      <div className="mx-auto max-w-xl px-4 py-12 text-center sm:py-16">
+        <motion.div initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', duration: 0.6 }}>
+          <div className="relative mx-auto flex h-24 w-24 items-center justify-center">
+            <span className="absolute inset-0 animate-ping rounded-full bg-emerald-300/30 [animation-iteration-count:2]" />
+            <span className="relative flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal shadow-xl shadow-emerald-500/30">
+              <CheckCircle2 className="h-12 w-12 text-white" />
+            </span>
+          </div>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+          <h1 className="mt-7 text-3xl font-bold text-navy">
+            {completed ? `All done, ${name}!` : justSubmitted ? `Thank you, ${name}!` : `We have your documents, ${name}`}
+          </h1>
+          <p className="mx-auto mt-3 max-w-md leading-relaxed text-gray-600">
+            {completed
+              ? 'HR has approved all your documents. There’s nothing more you need to do here.'
+              : <>
+                  We&apos;ve received your {joining ? 'joining ' : ''}documents for{' '}
+                  <span className="font-semibold text-navy">{view.jobTitle || 'the position'}</span>.
+                  {joining ? ' We’re glad to have you joining the HKM Vizag family.' : ''}
+                </>}
+          </p>
+
+          {/* What was sent */}
+          <div className="mt-8 overflow-hidden rounded-2xl border border-gray-200 bg-white text-left shadow-lg shadow-navy/5">
+            <div className="h-1.5 bg-gradient-to-r from-emerald-400 to-teal" />
+            <div className="p-5 sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">What you sent</p>
+                {view.applicationNumber && <span className="font-mono text-xs font-semibold text-gray-500">{view.applicationNumber}</span>}
+              </div>
+              <ul className="mt-3 space-y-2">
+                {sent.map((i) => (
+                  <li key={i._id} className="flex items-center gap-2.5 text-sm">
+                    <CheckCircle2 className={`h-4 w-4 shrink-0 ${i.status === 'approved' ? 'text-emerald-600' : 'text-emerald-500'}`} />
+                    <span className="min-w-0 flex-1 truncate text-gray-800">{i.label}</span>
+                    <span className="shrink-0 text-xs text-gray-400">
+                      {i.status === 'approved' ? 'Approved' : `${i.files.length} file${i.files.length > 1 ? 's' : ''}`}
+                    </span>
+                  </li>
+                ))}
+                {view.bank.wanted && view.bank.submitted && (
+                  <li className="flex items-center gap-2.5 text-sm">
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+                    <span className="min-w-0 flex-1 truncate text-gray-800">Bank details</span>
+                    <span className="shrink-0 text-xs text-gray-400">
+                      {view.bank.bankName ? `${view.bank.bankName} · ` : ''}••••{view.bank.accountLast4}
+                    </span>
+                  </li>
+                )}
+              </ul>
+            </div>
+          </div>
+
+          {/* What happens next */}
+          <div className="mt-6 rounded-2xl bg-white/80 p-5 text-left ring-1 ring-gray-100 sm:p-6">
+            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">What happens next</p>
+            <ol className="mt-4 space-y-4">
+              {steps.map((st, n) => (
+                <li key={st.title} className="flex gap-3">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-navy text-xs font-bold text-white">{n + 1}</span>
+                  <div>
+                    <p className="text-sm font-semibold text-navy">{st.title}</p>
+                    <p className="mt-0.5 text-sm leading-relaxed text-gray-600">{st.text}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            {view.applicationNumber && (
+              <a href={`/track?id=${encodeURIComponent(view.applicationNumber)}`}>
+                <Button size="lg">Track my application</Button>
+              </a>
+            )}
+            <Button size="lg" variant="outline" onClick={onReview}>
+              <FileText className="h-4 w-4" /> {completed ? 'View my uploads' : 'View or add files'}
+            </Button>
+          </div>
+
+          <p className="mt-8 flex items-start justify-center gap-2 text-xs leading-relaxed text-gray-500">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+            Your files are encrypted and only the HKM Vizag HR team can see them.
+          </p>
+          <HrContact className="mt-6 text-left" />
+        </motion.div>
       </div>
     </div>
   );
@@ -452,6 +608,7 @@ function DocumentRow({
             {item.files.length ? 'Add another file' : item.status === 'rejected' ? 'Upload a new file' : 'Choose file'}
             <span className="hidden font-normal text-gray-400 sm:inline">or drop it here</span>
           </label>
+          <p className="mt-1.5 text-center text-[11px] text-gray-400">PDF, JPG, PNG, WEBP, HEIC, DOC, DOCX · max 10 MB</p>
         </>
       )}
       {locked && <p className="mt-3 flex items-center gap-1.5 text-xs text-emerald-700"><CheckCircle2 className="h-4 w-4" /> HR has approved this document.</p>}

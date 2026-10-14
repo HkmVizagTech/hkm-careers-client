@@ -45,6 +45,8 @@ export interface DocumentFile {
   mime?: string;
   size?: number;
   uploadedAt: string;
+  /** Set when HR uploaded the file themselves. */
+  addedByName?: string;
 }
 
 export interface DocumentItem {
@@ -54,6 +56,10 @@ export interface DocumentItem {
   required: boolean;
   status: 'pending' | 'uploaded' | 'approved' | 'rejected';
   note?: string;
+  /** Last approve / re-upload decision. */
+  reviewedAt?: string;
+  /** When the candidate was emailed about this re-upload. */
+  notifiedAt?: string;
   files: DocumentFile[];
 }
 
@@ -78,6 +84,8 @@ export interface DocumentRequest {
   createdAt: string;
   submittedAt?: string;
   completedAt?: string;
+  /** Last time the candidate was emailed the link. */
+  lastEmailedAt?: string;
 }
 
 /** What the candidate sees on their private upload page. */
@@ -101,6 +109,83 @@ export interface CandidateDocumentView {
     accountType?: string;
   };
 }
+
+export interface EmployeeDocument {
+  _id: string;
+  label: string;
+  name: string;
+  mime?: string;
+  size?: number;
+  uploadedAt: string;
+  addedByName?: string;
+  fromApplication?: boolean;
+}
+
+export interface Employee {
+  _id: string;
+  employeeId?: string;
+  name: string;
+  designation?: string;
+  department?: { _id: string; name: string } | null;
+  joiningDate?: string;
+  status: 'active' | 'left';
+  leavingDate?: string;
+  email?: string;
+  phone?: string;
+  altPhone?: string;
+  currentAddress?: string;
+  permanentAddress?: string;
+  emergencyContact?: { name?: string; relationship?: string; phone?: string };
+  gender?: string;
+  dateOfBirth?: string;
+  bloodGroup?: string;
+  hasAadhaar?: boolean;
+  aadhaarLast4?: string;
+  hasPan?: boolean;
+  panLast4?: string;
+  bank?: { holder?: string; accountLast4?: string; ifsc?: string; bankName?: string; branch?: string; accountType?: string };
+  notes?: string;
+  documents: EmployeeDocument[];
+  application?: string;
+  applicationNumber?: string;
+  appliedFor?: string;
+  activity: { _id: string; text: string; by?: { _id: string; name: string } | string; byName?: string; at: string }[];
+  createdAt: string;
+  /** Only on "Add to employees": how many files were copied / couldn't be copied. */
+  copied?: number;
+  failed?: number;
+}
+
+export type EmployeeListItem = Pick<
+  Employee,
+  '_id' | 'employeeId' | 'name' | 'designation' | 'department' | 'joiningDate' | 'status' | 'leavingDate' | 'email' | 'phone' | 'application' | 'applicationNumber' | 'createdAt'
+> & { documentCount: number };
+
+/** Fields the employee forms send; empty strings clear a field. */
+export type EmployeeInput = Partial<{
+  employeeId: string;
+  name: string;
+  designation: string;
+  department: string;
+  joiningDate: string;
+  status: 'active' | 'left';
+  leavingDate: string;
+  email: string;
+  phone: string;
+  altPhone: string;
+  currentAddress: string;
+  permanentAddress: string;
+  emergencyContact: { name: string; relationship: string; phone: string };
+  gender: string;
+  dateOfBirth: string;
+  bloodGroup: string;
+  aadhaar: string;
+  clearAadhaar: boolean;
+  pan: string;
+  clearPan: boolean;
+  bank: { holder: string; account?: string; ifsc: string; bankName: string; branch: string; accountType: string };
+  notes: string;
+}>;
 
 export interface JobAlertSubscriber {
   _id: string;
@@ -310,6 +395,8 @@ export interface Application {
   screeningFlags?: string[];
   activity?: ActivityEntry[];
   documentRequests?: DocumentRequest[];
+  /** Set once HR added this person to Employees. */
+  employee?: string;
   /** Same person's applications for other jobs (matched by email or phone); admin view only. */
   otherApplications?: { _id: string; applicationNumber?: string; status: string; createdAt: string; job?: { _id: string; title: string } | null }[];
   applicationNumber?: string;

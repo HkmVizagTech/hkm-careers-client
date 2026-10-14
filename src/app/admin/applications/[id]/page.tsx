@@ -54,6 +54,7 @@ import { reportDelivery } from '@/lib/notify';
 import EmailsCard from '@/components/admin/EmailsCard';
 import DocumentsCard from '@/components/admin/DocumentsCard';
 import ActivityCard from '@/components/admin/ActivityCard';
+import AddToEmployees from '@/components/admin/AddToEmployees';
 import { Checkbox } from '@/components/ui/Checkbox';
 
 const statuses = [
@@ -284,6 +285,7 @@ export default function ApplicationDetailPage() {
           </div>
           {/* The things HR does most, one tap away. */}
           <div className="flex flex-wrap gap-2">
+            <AddToEmployees app={app} />
             <button
               type="button"
               onClick={() => setComposeRequest((n) => n + 1)}

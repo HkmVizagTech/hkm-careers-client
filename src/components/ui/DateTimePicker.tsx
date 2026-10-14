@@ -59,9 +59,11 @@ export interface DateTimePickerProps {
   /** Days before today can't be picked (default true). */
   disablePast?: boolean;
   idPrefix?: string;
+  /** Called when a time slot is clicked (the value is then complete), e.g. to collapse the picker. */
+  onTimePicked?: () => void;
 }
 
-export function DateTimePicker({ value, onChange, disablePast = true, idPrefix = 'dtp' }: DateTimePickerProps) {
+export function DateTimePicker({ value, onChange, disablePast = true, idPrefix = 'dtp', onTimePicked }: DateTimePickerProps) {
   const today = startOfDay(new Date());
   const { day, minutes } = parse(value);
   const [view, setView] = useState(() => new Date((day || today).getFullYear(), (day || today).getMonth(), 1));
@@ -274,7 +276,10 @@ export function DateTimePicker({ value, onChange, disablePast = true, idPrefix =
                   role="radio"
                   aria-checked={on}
                   disabled={off}
-                  onClick={() => emit(day, t)}
+                  onClick={() => {
+                    emit(day, t);
+                    onTimePicked?.();
+                  }}
                   className={`rounded-xl border px-2 py-2 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-plum ${
                     on
                       ? 'border-plum bg-plum text-white'
