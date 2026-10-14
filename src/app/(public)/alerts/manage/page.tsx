@@ -17,7 +17,7 @@ export default function ManageAlertsPage() {
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
-  return <div className="mx-auto max-w-lg px-4 py-16 sm:py-20">{children}</div>;
+  return <div className="mx-auto max-w-lg px-4 pb-16 pt-[112px] sm:pb-20 sm:pt-[136px]">{children}</div>;
 }
 
 function Manage() {

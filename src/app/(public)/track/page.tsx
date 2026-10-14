@@ -39,6 +39,8 @@ type TrackedApplication = {
   interview?: { scheduledAt: string; mode: 'in-person' | 'phone' | 'video'; venue: string; link: string } | null;
 };
 
+const TYPE_LABEL: Record<string, string> = { 'full-time': 'Full-time', 'part-time': 'Part-time', volunteer: 'Volunteer', intern: 'Internship' };
+
 const MODE_LABEL = { 'in-person': 'In person', phone: 'Phone call', video: 'Virtual interview' } as const;
 
 const formatInterview = (iso: string) =>
@@ -365,7 +367,7 @@ export default function TrackPage() {
                         </span>
                         <span className="inline-flex items-center gap-1.5 rounded-lg bg-surfaceAlt px-3 py-1.5">
                           <Clock className="h-3.5 w-3.5 text-ocean" />
-                          {result.job.type}
+                          {TYPE_LABEL[result.job.type] || result.job.type}
                         </span>
                       </div>
                     </div>

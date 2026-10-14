@@ -100,7 +100,7 @@ export default function DocumentUploadPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-10 sm:py-14">
+      <div className="mx-auto max-w-2xl px-4 pb-10 pt-[104px] sm:pb-14 sm:pt-[120px]">
         <Skeleton className="h-40 w-full rounded-2xl" />
         <Skeleton className="mt-5 h-28 w-full rounded-2xl" />
         <Skeleton className="mt-3 h-28 w-full rounded-2xl" />
@@ -111,7 +111,7 @@ export default function DocumentUploadPage() {
   if (loadError || !view) {
     const expired = loadError?.status === 410;
     return (
-      <div className="mx-auto max-w-lg px-4 py-16 text-center sm:py-20">
+      <div className="mx-auto max-w-lg px-4 pb-16 pt-[120px] text-center sm:pb-20 sm:pt-[140px]">
         <div className={`mx-auto flex h-16 w-16 items-center justify-center rounded-2xl ${expired ? 'bg-amber-100' : 'bg-red-50'}`}>
           {expired ? <Clock className="h-8 w-8 text-amber-600" /> : <AlertCircle className="h-8 w-8 text-red-500" />}
         </div>
@@ -171,7 +171,7 @@ export default function DocumentUploadPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-white to-white">
-      <div className="mx-auto max-w-2xl px-4 py-8 sm:py-12">
+      <div className="mx-auto max-w-2xl px-4 pb-8 pt-[100px] sm:pb-12 sm:pt-[116px]">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -326,7 +326,7 @@ function ThankYou({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-white to-emerald-50/40">
-      <div className="mx-auto max-w-xl px-4 py-12 text-center sm:py-16">
+      <div className="mx-auto max-w-xl px-4 pb-12 pt-[112px] text-center sm:pb-16 sm:pt-[128px]">
         <motion.div initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', duration: 0.6 }}>
           <div className="relative mx-auto flex h-24 w-24 items-center justify-center">
             <span className="absolute inset-0 animate-ping rounded-full bg-emerald-300/30 [animation-iteration-count:2]" />

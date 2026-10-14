@@ -756,7 +756,7 @@ export default function ApplyPage() {
   if (submitted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-white to-green-50/30">
-        <div className="mx-auto max-w-lg px-4 py-16 text-center sm:py-20">
+        <div className="mx-auto max-w-lg px-4 pb-16 pt-[120px] text-center sm:pb-20 sm:pt-[140px]">
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}

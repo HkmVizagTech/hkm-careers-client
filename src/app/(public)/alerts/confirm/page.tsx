@@ -15,7 +15,7 @@ export default function ConfirmAlertsPage() {
 }
 
 function Centered({ children }: { children: React.ReactNode }) {
-  return <div className="mx-auto max-w-lg px-4 py-20 text-center sm:py-24">{children}</div>;
+  return <div className="mx-auto max-w-lg px-4 pb-20 pt-[128px] text-center sm:pb-24 sm:pt-[152px]">{children}</div>;
 }
 
 function Confirm() {
