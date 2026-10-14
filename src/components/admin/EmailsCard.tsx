@@ -17,6 +17,8 @@ const KIND_LABEL: Record<EmailLog['kind'], string> = {
   interview: 'Interview details',
   custom: 'Message from HR',
   'hr-new-application': 'New-application alert to HR',
+  documents: 'Document upload link',
+  'hr-documents': 'Documents-received alert to HR',
 };
 
 const STATUS_STYLE: Record<EmailLog['status'], { label: string; cls: string; icon: typeof Check }> = {

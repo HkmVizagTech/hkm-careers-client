@@ -34,6 +34,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { formatDate } from '@/lib/utils';
 import type { Job } from '@/types';
 import JobText from '@/components/ui/JobText';
+import JobAlertSignup from '@/components/JobAlertSignup';
 import { hasQualifications } from '@/lib/jobText';
 
 const typeLabels: Record<string, string> = {
@@ -531,6 +532,11 @@ export default function JobDetailPage() {
                   </div>
                 </div>
               </div>
+
+              <JobAlertSignup
+                variant="card"
+                defaultDepartment={typeof job.department === 'object' && job.department ? job.department._id : job.department || undefined}
+              />
             </div>
           </motion.div>
         </motion.div>

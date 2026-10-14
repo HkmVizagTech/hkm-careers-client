@@ -20,6 +20,7 @@ import { getPublicJobs, getDepartments } from '@/lib/services';
 import { Badge } from '@/components/ui/Badge';
 import { JobCardSkeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
+import JobAlertSignup from '@/components/JobAlertSignup';
 import type { Job, Department, PaginationInfo } from '@/types';
 
 const typeLabels: Record<string, string> = {
@@ -304,6 +305,8 @@ function JobsContent() {
               )}
             </>
           )}
+
+          {!loading && <JobAlertSignup className="mt-14" departments={departments} defaultDepartment={department || undefined} />}
         </div>
       </section>
     </div>

@@ -23,6 +23,8 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { toast } from '@/lib/toast';
 import { pointsToText } from '@/lib/jobText';
 import { JobTextArea, QualificationPicker } from './JobContentFields';
+import ScreeningQuestionsEditor from './ScreeningQuestionsEditor';
+import type { ScreeningQuestion } from '@/types';
 import { SelectField } from '@/components/ui/SelectField';
 import { DatePicker } from '@/components/ui/DatePicker';
 
@@ -101,6 +103,7 @@ export default function JobForm({
         }
       : emptyForm
   );
+  const [questions, setQuestions] = useState<ScreeningQuestion[]>(job?.questions || []);
   const [showPreview, setShowPreview] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -123,6 +126,8 @@ export default function JobForm({
     if (!form.department) errs.department = 'Department is required';
     if (!form.location.trim()) errs.location = 'Location is required';
     if (!form.description.trim()) errs.description = 'Add the job description';
+    if (questions.some((q) => !q.label.trim())) errs.questions = 'Every screening question needs some text (or delete the empty one).';
+    else if (questions.some((q) => q.type === 'choice' && (q.options || []).length < 2)) errs.questions = 'Questions with options need at least two options.';
     if (form.status === 'active' && form.deadline && form.deadline < toISTDateInput(new Date())) {
       errs.deadline = 'This date has passed. Pick a future date or clear it.';
     }
@@ -146,6 +151,7 @@ export default function JobForm({
         responsibilities: form.responsibilities.trim(),
         qualifications: form.qualifications.trim(),
         descriptionFormat: 'text' as const,
+        questions: questions.map((q) => ({ ...q, label: q.label.trim() })),
       };
       if (isEdit && job) await updateJob(job._id, jobData as Partial<Job>);
       else await createJob(jobData as Partial<Job> & { department: string });
@@ -405,6 +411,10 @@ export default function JobForm({
               Application Settings
             </h2>
             <div className="mt-5 space-y-4">
+              <div className="border-b border-gray-100 pb-5">
+                <ScreeningQuestionsEditor questions={questions} onChange={setQuestions} />
+                {fieldErrors.questions && <p className="mt-2 text-xs text-red-500">{fieldErrors.questions}</p>}
+              </div>
               <div>
                 <label className="mb-1.5 block text-sm font-semibold text-gray-700">Open Applications To</label>
                 <div className="grid grid-cols-3 gap-2">

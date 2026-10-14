@@ -8,6 +8,9 @@ import type {
   Department,
   QualificationOption,
   EmailDraft,
+  DocumentRequest,
+  CandidateDocumentView,
+  JobAlertSubscriber,
   DashboardStats,
   AdminUser,
   AuthUser,
@@ -448,6 +451,141 @@ export async function viewResume(id: string, resumeUrl: string): Promise<void> {
     win?.close();
     throw err;
   }
+}
+
+// ---------------------------------------------------------------- document requests (admin)
+
+export interface NewDocumentRequest {
+  kind: "documents" | "joining";
+  items: { label: string; required: boolean; hint?: string }[];
+  wantBank: boolean;
+  message?: string;
+  expiresInDays?: number;
+  notify?: boolean;
+}
+
+export async function createDocumentRequest(
+  id: string,
+  input: NewDocumentRequest
+): Promise<{ requests: DocumentRequest[]; link: string; email: { status: string; error?: string } | null }> {
+  const { data } = await api.post(`/applications/${id}/documents`, input);
+  return data;
+}
+
+export async function reviewDocumentItem(
+  id: string,
+  rid: string,
+  iid: string,
+  input: { status: "approved" | "rejected" | "uploaded"; note?: string }
+): Promise<{ requests: DocumentRequest[] }> {
+  const { data } = await api.patch(`/applications/${id}/documents/${rid}/items/${iid}`, input);
+  return data;
+}
+
+export async function remindDocumentRequest(
+  id: string,
+  rid: string
+): Promise<{ requests: DocumentRequest[]; link: string; email: { status: string; error?: string } }> {
+  const { data } = await api.post(`/applications/${id}/documents/${rid}/notify`);
+  return data;
+}
+
+export async function revealBankAccount(id: string, rid: string): Promise<string> {
+  const { data } = await api.get(`/applications/${id}/documents/${rid}/bank`);
+  return data.account;
+}
+
+export async function deleteDocumentRequest(id: string, rid: string): Promise<{ requests: DocumentRequest[] }> {
+  const { data } = await api.delete(`/applications/${id}/documents/${rid}`);
+  return data;
+}
+
+/** Fetch an uploaded document (decrypted by the server) as a blob + its friendly file name. */
+export async function fetchDocumentFile(id: string, rid: string, fid: string, inline: boolean) {
+  const { data, headers } = await api.get(`/applications/${id}/documents/${rid}/files/${fid}`, {
+    params: inline ? { inline: 1 } : undefined,
+    responseType: "blob",
+  });
+  return { blob: data as Blob, name: fileNameFrom(String(headers["content-disposition"] || ""), "document") };
+}
+
+// ---------------------------------------------------------------- document upload (candidate, public)
+
+export async function getDocumentRequestByToken(token: string): Promise<CandidateDocumentView> {
+  const { data } = await api.get(`/documents/${encodeURIComponent(token)}`);
+  return data;
+}
+
+export async function uploadRequestedDocument(
+  token: string,
+  itemId: string,
+  file: File,
+  onProgress?: (pct: number) => void
+): Promise<CandidateDocumentView> {
+  const form = new FormData();
+  form.append("file", file);
+  const { data } = await api.post(`/documents/${encodeURIComponent(token)}/items/${itemId}`, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+    onUploadProgress: (e) => e.total && onProgress?.(Math.round((e.loaded / e.total) * 100)),
+  });
+  return data;
+}
+
+export async function removeRequestedDocument(token: string, itemId: string, fileId: string): Promise<CandidateDocumentView> {
+  const { data } = await api.delete(`/documents/${encodeURIComponent(token)}/items/${itemId}/files/${fileId}`);
+  return data;
+}
+
+export async function saveBankDetails(
+  token: string,
+  input: { holder: string; account: string; ifsc: string; bankName: string; branch: string; accountType: string }
+): Promise<CandidateDocumentView> {
+  const { data } = await api.post(`/documents/${encodeURIComponent(token)}/bank`, input);
+  return data;
+}
+
+export async function submitRequestedDocuments(token: string): Promise<CandidateDocumentView> {
+  const { data } = await api.post(`/documents/${encodeURIComponent(token)}/submit`);
+  return data;
+}
+
+// ---------------------------------------------------------------- job alerts
+
+export async function subscribeJobAlerts(input: {
+  email: string;
+  name?: string;
+  departments?: string[];
+}): Promise<{ status: "confirm-sent" | "already-subscribed" }> {
+  const { data } = await api.post("/job-alerts/subscribe", input);
+  return data;
+}
+
+export async function confirmJobAlerts(token: string): Promise<{ email: string; departments: string[]; manageToken: string }> {
+  const { data } = await api.post("/job-alerts/confirm", { token });
+  return data;
+}
+
+export async function getJobAlertSettings(token: string): Promise<{ email: string; name?: string; confirmed: boolean; departments: string[] }> {
+  const { data } = await api.get(`/job-alerts/manage/${encodeURIComponent(token)}`);
+  return data;
+}
+
+export async function updateJobAlertSettings(token: string, departments: string[]) {
+  const { data } = await api.put(`/job-alerts/manage/${encodeURIComponent(token)}`, { departments });
+  return data as { email: string; confirmed: boolean; departments: string[] };
+}
+
+export async function unsubscribeJobAlerts(token: string): Promise<void> {
+  await api.post("/job-alerts/unsubscribe", { token });
+}
+
+export async function getJobAlertSubscribers(): Promise<{ total: number; confirmed: number; subscribers: JobAlertSubscriber[] }> {
+  const { data } = await api.get("/job-alerts");
+  return data;
+}
+
+export async function removeJobAlertSubscriber(id: string): Promise<void> {
+  await api.delete(`/job-alerts/${id}`);
 }
 
 // ---------------------------------------------------------------- email

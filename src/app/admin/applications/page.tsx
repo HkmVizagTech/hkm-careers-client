@@ -223,6 +223,14 @@ export default function ApplicationsPage() {
                             <p className="flex items-center gap-1.5">
                               {app.applicationNumber && <span className="font-mono text-[11px] text-ocean">{app.applicationNumber}</span>}
                               {app.source && <span className="rounded bg-gray-100 px-1.5 py-px text-[10px] font-semibold capitalize text-gray-600">via {app.source}</span>}
+                              {!!app.screeningFlags?.length && (
+                                <span
+                                  className="rounded bg-red-50 px-1.5 py-px text-[10px] font-semibold text-red-700"
+                                  title={`Doesn't meet: ${app.screeningFlags.join(', ')}`}
+                                >
+                                  ⚠ {app.screeningFlags.length} flag{app.screeningFlags.length === 1 ? '' : 's'}
+                                </span>
+                              )}
                             </p>
                           </div>
                         </div>

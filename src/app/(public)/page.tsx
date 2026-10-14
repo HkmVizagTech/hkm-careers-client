@@ -25,6 +25,7 @@ import { JobCardSkeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Reveal, RevealGroup, RevealItem } from '@/components/ui/Reveal';
 import type { Job, Department } from '@/types';
+import JobAlertSignup from '@/components/JobAlertSignup';
 
 const typeLabels: Record<string, string> = {
   'full-time': 'Full Time',
@@ -506,6 +507,13 @@ export default function HomePage() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Job alerts */}
+      <section className="page-canvas pt-4 pb-4 sm:pt-8">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <JobAlertSignup title="Get new openings in your inbox" />
         </div>
       </section>
 

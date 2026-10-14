@@ -38,6 +38,7 @@ import {
   Search,
   MessageCircle,
   Info,
+  ListChecks,
 } from 'lucide-react';
 import { checkDuplicateApplication, getPublicJobBySlug, submitApplication, type DuplicateApplication } from '@/lib/services';
 import { captureApplySource, readApplySource } from '@/lib/applySource';
@@ -46,7 +47,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { SelectField } from '@/components/ui/SelectField';
 import { useIsMobile } from '@/lib/useMediaQuery';
-import type { Job } from '@/types';
+import type { Job, ScreeningQuestion } from '@/types';
 
 type SectionKey = 'personal' | 'experience' | 'educational' | 'whyHire' | 'resume' | 'profiles';
 
@@ -204,6 +205,65 @@ const inputCls = (hasError?: boolean) =>
   `${INPUT_CLASS} ${hasError ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`;
 
 /** Wraps a label, control, and error text in one consistent block. */
+const answerInputCls = (error?: string) =>
+  `w-full rounded-xl border bg-white px-4 py-3.5 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ocean/30 focus:border-ocean ${error ? 'border-red-400 bg-red-50/30' : 'border-gray-300'}`;
+
+/** One screening question on the apply form, rendered to suit its answer type. */
+function ScreeningInput({
+  question: q,
+  value,
+  error,
+  onChange,
+}: {
+  question: ScreeningQuestion;
+  value: string;
+  error?: string;
+  onChange: (v: string) => void;
+}) {
+  const pill = (on: boolean) =>
+    `rounded-xl border px-4 py-2.5 text-sm font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ocean/40 ${
+      on ? 'border-ocean bg-ocean text-white shadow-sm' : `bg-white text-gray-700 hover:border-ocean/50 ${error ? 'border-red-300' : 'border-gray-300'}`
+    }`;
+  return (
+    <Field label={q.label} required={q.required} error={error}>
+      {q.type === 'yesno' || q.type === 'choice' ? (
+        <div role="radiogroup" aria-label={q.label} className="flex flex-wrap gap-2">
+          {(q.type === 'yesno' ? [{ v: 'yes', l: 'Yes' }, { v: 'no', l: 'No' }] : (q.options || []).map((o) => ({ v: o, l: o }))).map((o) => (
+            <button
+              key={o.v}
+              type="button"
+              role="radio"
+              aria-checked={value === o.v}
+              onClick={() => onChange(value === o.v && !q.required ? '' : o.v)}
+              className={`${pill(value === o.v)} ${q.type === 'yesno' ? 'min-w-[88px]' : ''}`}
+            >
+              {o.l}
+            </button>
+          ))}
+        </div>
+      ) : q.type === 'paragraph' ? (
+        <textarea
+          rows={4}
+          maxLength={3000}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={`${answerInputCls(error)} resize-none`}
+        />
+      ) : (
+        <input
+          type="text"
+          inputMode={q.type === 'number' ? 'decimal' : undefined}
+          maxLength={q.type === 'number' ? 15 : 300}
+          value={value}
+          onChange={(e) => onChange(q.type === 'number' ? e.target.value.replace(/[^\d.]/g, '') : e.target.value)}
+          placeholder={q.type === 'number' ? 'Enter a number' : ''}
+          className={`${answerInputCls(error)} ${q.type === 'number' ? 'sm:max-w-xs' : ''}`}
+        />
+      )}
+    </Field>
+  );
+}
+
 function Field({
   label,
   required,
@@ -250,6 +310,9 @@ export default function ApplyPage() {
   const [showLinkedin, setShowLinkedin] = useState(false);
   const [showGithub, setShowGithub] = useState(false);
   const [showPortfolio, setShowPortfolio] = useState(false);
+  /** Answers to the job's screening questions, keyed by question id. */
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answerErrors, setAnswerErrors] = useState<Record<string, string>>({});
 
   const isMobile = useIsMobile();
   const [step, setStep] = useState(1);
@@ -379,6 +442,32 @@ export default function ApplyPage() {
     if (genderOnly && watch('gender') !== genderOnly) setValue('gender', genderOnly, { shouldValidate: false });
   }, [genderOnly]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const questions = (job?.questions || []).filter((q) => q._id);
+  const setAnswer = (id: string, value: string) => {
+    setAnswers((a) => ({ ...a, [id]: value }));
+    if (answerErrors[id]) setAnswerErrors((e) => ({ ...e, [id]: '' }));
+  };
+  /** Required screening questions must be answered (numbers must be numbers). Flags the first problem. */
+  const validateAnswers = () => {
+    const errs: Record<string, string> = {};
+    for (const q of questions) {
+      const v = (answers[q._id!] || '').trim();
+      if (!v) {
+        if (q.required) errs[q._id!] = 'Please answer this question';
+      } else if (q.type === 'number' && !Number.isFinite(Number(v))) {
+        errs[q._id!] = 'Please enter a number';
+      }
+    }
+    setAnswerErrors(errs);
+    const first = Object.keys(errs)[0];
+    if (first) {
+      requestAnimationFrame(() =>
+        document.getElementById(`question-${first}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }),
+      );
+    }
+    return !first;
+  };
+
   const validateGender = () => {
     if (!genderMismatch(watch('gender'))) return true;
     setError('gender', { type: 'manual', message: genderOnlyMessage });
@@ -430,6 +519,8 @@ export default function ApplyPage() {
         return;
       }
     }
+
+    if (layout.whyHire === step && !validateAnswers()) return;
 
     if (layout.educational === step && !validateEducational()) {
       document.getElementById('educational-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -530,6 +621,11 @@ export default function ApplyPage() {
       return;
     }
 
+    if (!validateAnswers()) {
+      setStep(layout.whyHire);
+      return;
+    }
+
     if (!file) {
       setFileError('Resume is required');
       setStep(layout.resume);
@@ -569,6 +665,14 @@ export default function ApplyPage() {
       // Where the applicant came from (LinkedIn, Indeed, WhatsApp...), set by shared links: ?src=linkedin
       const source = readApplySource();
       if (source) formData.append('source', source);
+      if (questions.length) {
+        const given: Record<string, string> = {};
+        questions.forEach((q) => {
+          const v = (answers[q._id!] || '').trim();
+          if (v) given[q._id!] = v;
+        });
+        formData.append('answers', JSON.stringify(given));
+      }
       formData.append('resume', file);
       const result = await submitApplication(formData);
       setApplicationId(result.application.id);
@@ -622,6 +726,12 @@ export default function ApplyPage() {
     if (formData.portfolioUrl) rows.push({ label: 'Portfolio', value: formData.portfolioUrl });
     return rows.filter((r) => r.value);
   }, [formData, job]);
+  const answeredRows = questions
+    .map((q) => {
+      const v = (answers[q._id!] || '').trim();
+      return { label: q.label, value: q.type === 'yesno' ? (v === 'yes' ? 'Yes' : v === 'no' ? 'No' : '') : v };
+    })
+    .filter((r) => r.value);
 
   /** Jump to the step that owns a section, for "Edit" links in the review card. */
   const stepOfSection = (key: SectionKey) => layout[key];
@@ -1350,6 +1460,27 @@ export default function ApplyPage() {
                     />
                   </Field>
                 </div>
+
+                {questions.length > 0 && (
+                  <div className="mt-7">
+                    <h4 className="flex items-center gap-2 text-sm font-bold text-navy">
+                      <ListChecks className="h-4 w-4 text-ocean" /> A few quick questions
+                    </h4>
+                    <p className="mt-1 text-xs text-gray-500">These help us understand your fit without a screening call.</p>
+                    <div className="mt-4 space-y-5">
+                      {questions.map((q) => (
+                        <div key={q._id} id={`question-${q._id}`}>
+                          <ScreeningInput
+                            question={q}
+                            value={answers[q._id!] || ''}
+                            error={answerErrors[q._id!]}
+                            onChange={(v) => setAnswer(q._id!, v)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Section: Resume */}
@@ -1445,6 +1576,19 @@ export default function ApplyPage() {
                         <dt className="shrink-0 text-xs font-semibold uppercase tracking-wide text-gray-400">Resume</dt>
                         <dd className="min-w-0 text-right text-sm font-medium text-gray-700 [overflow-wrap:anywhere]">{file ? file.name : '—'}</dd>
                       </div>
+                      {answeredRows.length > 0 && (
+                        <div className="min-w-0 sm:col-span-2">
+                          <dt className="text-xs font-semibold uppercase tracking-wide text-gray-400">Your answers</dt>
+                          <dd className="mt-2 space-y-2">
+                            {answeredRows.map((r) => (
+                              <div key={r.label} className="rounded-lg bg-white/70 px-3 py-2">
+                                <p className="text-xs text-gray-500">{r.label}</p>
+                                <p className="mt-0.5 whitespace-pre-line text-sm font-medium text-gray-700 [overflow-wrap:anywhere]">{r.value}</p>
+                              </div>
+                            ))}
+                          </dd>
+                        </div>
+                      )}
                     </dl>
                   </details>
                 </div>

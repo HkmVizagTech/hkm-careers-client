@@ -7,6 +7,112 @@ export interface Department {
   updatedAt: string;
 }
 
+export type QuestionType = 'text' | 'paragraph' | 'yesno' | 'choice' | 'number';
+
+/** Screening question on a job. accept/min/max (the required answers) only reach admins. */
+export interface ScreeningQuestion {
+  _id?: string;
+  label: string;
+  type: QuestionType;
+  required: boolean;
+  options?: string[];
+  accept?: string[];
+  min?: number | null;
+  max?: number | null;
+}
+
+export interface ScreeningAnswer {
+  question?: string;
+  label: string;
+  type: QuestionType;
+  value: string;
+  /** false = doesn't meet the job's requirement; undefined = no requirement set */
+  meets?: boolean;
+}
+
+export interface ActivityEntry {
+  _id: string;
+  type: string;
+  text: string;
+  by?: { _id: string; name: string } | string | null;
+  byName?: string;
+  at: string;
+}
+
+export interface DocumentFile {
+  _id: string;
+  name: string;
+  mime?: string;
+  size?: number;
+  uploadedAt: string;
+}
+
+export interface DocumentItem {
+  _id: string;
+  label: string;
+  hint?: string;
+  required: boolean;
+  status: 'pending' | 'uploaded' | 'approved' | 'rejected';
+  note?: string;
+  files: DocumentFile[];
+}
+
+export interface DocumentRequest {
+  _id: string;
+  kind: 'documents' | 'joining';
+  message?: string;
+  expiresAt?: string;
+  expired?: boolean;
+  status: 'open' | 'submitted' | 'completed' | 'cancelled';
+  items: DocumentItem[];
+  bank?: {
+    wanted: boolean;
+    holder?: string;
+    accountLast4?: string;
+    ifsc?: string;
+    bankName?: string;
+    branch?: string;
+    accountType?: string;
+    submittedAt?: string;
+  };
+  createdAt: string;
+  submittedAt?: string;
+  completedAt?: string;
+}
+
+/** What the candidate sees on their private upload page. */
+export interface CandidateDocumentView {
+  firstName: string;
+  jobTitle: string;
+  applicationNumber?: string;
+  kind: 'documents' | 'joining';
+  message: string;
+  status: DocumentRequest['status'];
+  expiresAt?: string;
+  items: (Omit<DocumentItem, 'files'> & { files: Omit<DocumentFile, 'mime'>[] })[];
+  bank: {
+    wanted: boolean;
+    submitted?: boolean;
+    holder?: string;
+    accountLast4?: string;
+    ifsc?: string;
+    bankName?: string;
+    branch?: string;
+    accountType?: string;
+  };
+}
+
+export interface JobAlertSubscriber {
+  _id: string;
+  email: string;
+  name?: string;
+  departments: { _id: string; name: string }[];
+  confirmed: boolean;
+  createdAt: string;
+  lastAlertAt?: string;
+  alertsSent?: number;
+}
+
 export interface Job {
   _id: string;
   title: string;
@@ -31,6 +137,8 @@ export interface Job {
   /** Last day to apply (end of that day, India time). The job closes itself after it. */
   deadline?: string | null;
   applicationCount: number;
+  /** Screening questions shown on the apply form. */
+  questions?: ScreeningQuestion[];
   /** Admin list only: applications still in "Received". */
   newApplications?: number;
   postedBy: string;
@@ -158,7 +266,7 @@ export interface AttentionSummary {
   }[];
 }
 
-export type EmailKind = "received" | "status" | "interview" | "custom" | "hr-new-application";
+export type EmailKind = "received" | "status" | "interview" | "custom" | "hr-new-application" | "documents" | "hr-documents";
 
 export interface EmailLog {
   _id: string;
@@ -197,6 +305,11 @@ export interface MailStatus {
 
 export interface Application {
   _id: string;
+  answers?: ScreeningAnswer[];
+  /** Labels of screening questions whose answer doesn't meet the job's requirement. */
+  screeningFlags?: string[];
+  activity?: ActivityEntry[];
+  documentRequests?: DocumentRequest[];
   /** Same person's applications for other jobs (matched by email or phone); admin view only. */
   otherApplications?: { _id: string; applicationNumber?: string; status: string; createdAt: string; job?: { _id: string; title: string } | null }[];
   applicationNumber?: string;

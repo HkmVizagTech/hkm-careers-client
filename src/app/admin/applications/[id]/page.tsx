@@ -52,6 +52,8 @@ import { formatDate } from '@/lib/utils';
 import type { Application, CandidateNotification, RoleFilled, WhatsAppMessage } from '@/types';
 import { reportDelivery } from '@/lib/notify';
 import EmailsCard from '@/components/admin/EmailsCard';
+import DocumentsCard from '@/components/admin/DocumentsCard';
+import ActivityCard from '@/components/admin/ActivityCard';
 import { Checkbox } from '@/components/ui/Checkbox';
 
 const statuses = [
@@ -186,7 +188,7 @@ export default function ApplicationDetailPage() {
   const handleAddNote = async () => {
     if (!app || !noteText.trim()) return;
     setAddingNote(true);
-    try { const updated = await addApplicationNote(app._id, noteText); setApp({ ...app, notes: updated.notes }); setNoteText(''); }
+    try { const updated = await addApplicationNote(app._id, noteText); setApp({ ...app, notes: updated.notes }); setNoteText(''); load(); }
     catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to add note'); }
     finally { setAddingNote(false); }
   };
@@ -240,9 +242,19 @@ export default function ApplicationDetailPage() {
               </button>
             </div>
           </div>
-          <Badge variant={app.status as 'received'}>
-            {statuses.find((s) => s.value === app.status)?.label || app.status}
-          </Badge>
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+            {!!app.screeningFlags?.length && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200"
+                title={`Doesn't meet: ${app.screeningFlags.join(', ')}`}
+              >
+                <AlertTriangle className="h-3.5 w-3.5" /> {app.screeningFlags.length} screening flag{app.screeningFlags.length === 1 ? '' : 's'}
+              </span>
+            )}
+            <Badge variant={app.status as 'received'}>
+              {statuses.find((s) => s.value === app.status)?.label || app.status}
+            </Badge>
+          </div>
         </div>
         <div className="mt-4 flex flex-col gap-3 rounded-xl bg-background p-3.5 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
@@ -323,7 +335,7 @@ export default function ApplicationDetailPage() {
                 <Detail label="Date of birth">{app.dateOfBirth ? formatDate(app.dateOfBirth) : undefined}</Detail>
                 <Detail label="Location">{app.location}</Detail>
                 <Detail label="Current location">{app.currentLocation}</Detail>
-                <Detail label="Available to join">{app.availableToJoin ? `${app.availableToJoin} days` : undefined}</Detail>
+                <Detail label="Available to join">{app.availableToJoin ? (/^\d+$/.test(app.availableToJoin.trim()) ? `${app.availableToJoin.trim()} days` : app.availableToJoin) : undefined}</Detail>
               </DetailGroup>
               )}
               <DetailGroup icon={Briefcase} title="Experience">
@@ -377,6 +389,46 @@ export default function ApplicationDetailPage() {
             </div>
           </motion.div>
 
+          {/* Screening answers */}
+          {!!app.answers?.length && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }} className="rounded-2xl border border-hairline bg-white p-5 shadow-soft sm:p-6">
+              <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
+                <MessageSquare className="h-5 w-5 text-ocean" /> Screening Answers
+              </h2>
+              <ul className="mt-4 divide-y divide-gray-100">
+                {app.answers.map((a, i) => (
+                  <li key={i} className="flex items-start justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-gray-500">{a.label}</p>
+                      <p className="mt-0.5 whitespace-pre-line text-sm font-semibold text-navy [overflow-wrap:anywhere]">
+                        {a.type === 'yesno' ? (a.value === 'yes' ? 'Yes' : 'No') : a.value}
+                      </p>
+                    </div>
+                    {a.meets === false && (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700">
+                        <AlertTriangle className="h-3 w-3" /> Doesn&apos;t meet
+                      </span>
+                    )}
+                    {a.meets === true && (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                        <Check className="h-3 w-3" /> Meets
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+          )}
+
+          <DocumentsCard
+            applicationId={app._id}
+            candidateName={app.name}
+            status={app.status}
+            requests={app.documentRequests || []}
+            onChange={(documentRequests) => setApp((a) => (a ? { ...a, documentRequests } : a))}
+            onActivity={() => load()}
+          />
+
           {/* Cover Letter */}
           {app.coverLetter && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-hairline bg-white p-6 shadow-soft">
@@ -410,6 +462,8 @@ export default function ApplicationDetailPage() {
               <Button onClick={handleAddNote} loading={addingNote} disabled={!noteText.trim()}>Add</Button>
             </div>
           </motion.div>
+
+          <ActivityCard activity={app.activity || []} />
         </div>
 
         {/* Sidebar */}
@@ -447,7 +501,7 @@ export default function ApplicationDetailPage() {
             applicationId={app._id}
             candidateEmail={app.email}
             emails={app.emails || []}
-            onChange={(emails) => setApp((a) => (a ? { ...a, emails } : a))}
+            onChange={(emails) => { setApp((a) => (a ? { ...a, emails } : a)); load(); }}
             composeRequest={composeRequest}
             candidateName={app.name}
             jobTitle={jobTitle === '—' ? '' : jobTitle}
@@ -461,14 +515,14 @@ export default function ApplicationDetailPage() {
             interview={app.interview}
             startEditing={promptInterview}
             openRequest={scheduleRequest}
-            onChange={(interview) => { setApp((a) => (a ? { ...a, interview } : a)); setPromptInterview(false); }}
+            onChange={(interview) => { setApp((a) => (a ? { ...a, interview } : a)); setPromptInterview(false); load(); }}
             onMessage={() => load()}
           />
 
           <FollowUpsCard
             applicationId={app._id}
             followUps={app.followUps || []}
-            onChange={(followUps) => setApp((a) => (a ? { ...a, followUps } : a))}
+            onChange={(followUps) => { setApp((a) => (a ? { ...a, followUps } : a)); load(); }}
           />
 
           {/* WhatsApp is no longer used; earlier messages stay viewable. */}
